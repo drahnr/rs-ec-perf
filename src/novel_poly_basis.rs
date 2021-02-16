@@ -110,32 +110,32 @@ fn formal_derivative(cos: &mut [GFSymbol], size: usize) {
 
 //IFFT in the proposed basis
 fn inverse_fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: usize) {
-    // All line references to Algorithm 2 page 6288 of
-    // https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
+	// All line references to Algorithm 2 page 6288 of
+	// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
 
-    // Depth of the recursion on line 7 and 8 is given by depart_no aka 1 << (i of Algorithm 2).
+	// Depth of the recursion on line 7 and 8 is given by depart_no aka 1 << (i of Algorithm 2).
 	let mut depart_no = 1_usize;
 	while depart_no < size {
-        // Bredth first loop across recursions from line 7 and 8, so
-        // this j indicates recusion branch, presumably making this j be
-        // r in Algorith 2 and increases by depart_no gives powers of two.
-        // Q:  Is j shifted from r any?
+		// Bredth first loop across recursions from line 7 and 8, so
+		// this j indicates recusion branch, presumably making this j be
+		// r in Algorith 2 and increases by depart_no gives powers of two.
+		// Q:  Is j shifted from r any?
 		let mut j = depart_no;
 		while j < size {
-            // Loop on line 3, so i corresponds to j in Algorithm 2
+			// Loop on line 3, so i corresponds to j in Algorithm 2
 			for i in (j - depart_no)..j {
-                // Line 4, justified by (34) page 6288
+				// Line 4, justified by (34) page 6288
 				data[i + depart_no] ^= data[i];
 			}
 
-            // TODO: Unclear how skew does not depend upon i, maybe the s_i is constant?
-            // Or maybe this craetes a problem?  Non-constant skew yields an invertable
-            // map, but maybe not an FFT.
+			// TODO: Unclear how skew does not depend upon i, maybe the s_i is constant?
+			// Or maybe this craetes a problem?	 Non-constant skew yields an invertable
+			// map, but maybe not an FFT.
 			let skew = unsafe { SKEW_FACTOR[j + index - 1] };
 			if skew != MODULO {
-                // Again loop on line 3, except skew should depend upon i aka j in Algorithm 2 (TODO)
+				// Again loop on line 3, except skew should depend upon i aka j in Algorithm 2 (TODO)
 				for i in (j - depart_no)..j {
-                    // Line 5, justified by (35) page 6288
+					// Line 5, justified by (35) page 6288
 					data[i] ^= mul_table(data[i + depart_no], skew);
 				}
 			}
@@ -148,31 +148,31 @@ fn inverse_fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: us
 
 //FFT in the proposed basis
 fn fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: usize) {
-    // All line references to Algorithm 1 page 6287 of 
-    // https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
+	// All line references to Algorithm 1 page 6287 of 
+	// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
 
-    // Depth of the recursion on line 3 and 4 is given by depart_no aka 1 << (i of Algorithm 1).
+	// Depth of the recursion on line 3 and 4 is given by depart_no aka 1 << (i of Algorithm 1).
 	let mut depart_no = size >> 1_usize;
 	while depart_no > 0 {
-        // Bredth first loop across recursions from line 3 and 4, so
-        // this j indicates recusion branch, presumably making this j be
-        // r in Algorith 1 and increases by depart_no gives powers of two.
+		// Bredth first loop across recursions from line 3 and 4, so
+		// this j indicates recusion branch, presumably making this j be
+		// r in Algorith 1 and increases by depart_no gives powers of two.
 		let mut j = depart_no;
 		while j < size {
-            // TODO: Unclear how skew does not depend upon i, maybe the s_i is constant?
-            // Or maybe this craetes a problem?  Non-constant skew yields an invertable
-            // map, but maybe not an FFT.
+			// TODO: Unclear how skew does not depend upon i, maybe the s_i is constant?
+			// Or maybe this craetes a problem?	 Non-constant skew yields an invertable
+			// map, but maybe not an FFT.
 			let skew = unsafe { SKEW_FACTOR[j + index - 1] };
 			if skew != MODULO {
-                // Loop on line 5, except skew should depend upon i aka j in Algorithm 1 (TODO)
+				// Loop on line 5, except skew should depend upon i aka j in Algorithm 1 (TODO)
 				for i in (j - depart_no)..j {
-                    // Line 6, explained by (28) page 6287
+					// Line 6, explained by (28) page 6287
 					data[i] ^= mul_table(data[i + depart_no], skew);
 				}
 			}
-            // Again loop on line 5, so i corresponds to j in Algorithm 1
+			// Again loop on line 5, so i corresponds to j in Algorithm 1
 			for i in (j - depart_no)..j {
-                // Line 7, explained by (31) page 6287
+				// Line 7, explained by (31) page 6287
 				data[i + depart_no] ^= data[i];
 			}
 			j += depart_no << 1;
@@ -267,7 +267,7 @@ unsafe fn init_dec() {
 
 //Encoding alg for k/n < 0.5: message is a power of two
 fn encode_low(data: &[GFSymbol], k: usize, codeword: &mut [GFSymbol], n: usize) {
-	assert!(k + k <  n);
+	assert!(k + k <	 n);
 	assert_eq!(codeword.len(), n);
 	assert_eq!(data.len(), n);
 

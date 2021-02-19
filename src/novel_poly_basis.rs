@@ -215,12 +215,13 @@ unsafe fn init() {
 
 //initialize SKEW_FACTOR[], B[], LOG_WALSH[]
 unsafe fn init_dec() {
-	let mut base: [GFSymbol; FIELD_BITS - 1] = Default::default();
+	let mut field_base: [GFSymbol; FIELD_BITS - 1] = Default::default();
 
 	for i in 1..FIELD_BITS {
-		base[i - 1] = 1 << i;
+		field_base[i - 1] = 1 << i;
 	}
 
+    // 
 	for m in 0..(FIELD_BITS - 1) {
 		let step = 1 << (m + 1);
 		SKEW_FACTOR[(1 << m) - 1] = 0;
@@ -229,34 +230,36 @@ unsafe fn init_dec() {
 
 			let mut j = (1 << m) - 1;
 			while j < s {
-				SKEW_FACTOR[j + s] = SKEW_FACTOR[j] ^ base[i];
+                // Justified by (5) page 6285
+				SKEW_FACTOR[j + s] = SKEW_FACTOR[j] ^ field_base[i];
 				j += step;
 			}
 		}
 
-		let idx = mul_table(base[m], LOG_TABLE[(base[m] ^ 1_u16) as usize]);
-		base[m] = MODULO - LOG_TABLE[idx as usize];
+		let idx = mul_table(field_base[m], LOG_TABLE[(field_base[m] ^ 1_u16) as usize]);
+		field_base[m] = MODULO - LOG_TABLE[idx as usize];
 
 		for i in (m + 1)..(FIELD_BITS - 1) {
-			let b = LOG_TABLE[(base[i] as u16 ^ 1_u16) as usize] as u32 + base[m] as u32;
+			let b = LOG_TABLE[(field_base[i] as u16 ^ 1_u16) as usize] as u32 + field_base[m] as u32;
 			let b = b % MODULO as u32;
-			base[i] = mul_table(base[i], b as u16);
+			field_base[i] = mul_table(field_base[i], b as u16);
 		}
 	}
+    // 
 	for i in 0..(MODULO as usize) {
 		SKEW_FACTOR[i] = LOG_TABLE[SKEW_FACTOR[i] as usize];
 	}
 
-	base[0] = MODULO - base[0];
+	field_base[0] = MODULO - field_base[0];
 	for i in 1..(FIELD_BITS - 1) {
-		base[i] = ((MODULO as u32 - base[i] as u32 + base[i - 1] as u32) % MODULO as u32) as GFSymbol;
+		field_base[i] = ((MODULO as u32 - field_base[i] as u32 + field_base[i - 1] as u32) % MODULO as u32) as GFSymbol;
 	}
 
 	B[0] = 0;
 	for i in 0..(FIELD_BITS - 1) {
 		let depart = 1 << i;
 		for j in 0..depart {
-			B[j + depart] = ((B[j] as u32 + base[i] as u32) % MODULO as u32) as GFSymbol;
+			B[j + depart] = ((B[j] as u32 + field_base[i] as u32) % MODULO as u32) as GFSymbol;
 		}
 	}
 

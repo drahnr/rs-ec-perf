@@ -23,7 +23,7 @@ const BASE: [GFSymbol; FIELD_BITS] =
 
 const FIELD_SIZE: usize = 1_usize << FIELD_BITS;
 
-const MODULO: GFSymbol = (FIELD_SIZE - 1) as GFSymbol;
+const MODULO: GFSymbol = (FIELD_SIZE - 1) as GFSymbol;	// All bits set
 
 static mut LOG_TABLE: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
 static mut EXP_TABLE: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
@@ -114,15 +114,26 @@ fn inverse_fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: us
 	// All line references to Algorithm 2 page 6288 of
 	// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
 
-	// Depth of the recursion on line 7 and 8 is given by depart_no aka 1 << (i of Algorithm 2).
+	// Depth of the recursion on line 7 and 8 is given by depart_no
+	// aka 1 << ((k of Algorithm 2) - (i of Algorithm 2)) where
+	// k of Algorithm 1 is read as FIELD_BITS here.
+	// Recusion base layer implicitly imports d_r aka ala line 1.  
+	// After this, we start at depth (i of Algorithm 2) = (k of Algorithm 2) - 1
+	// and progress through FIELD_BITS-1 steps, obtaining \Psi_\beta(0,0).
 	let mut depart_no = 1_usize;
 	while depart_no < size {
-		// Bredth first loop across recursions from line 7 and 8, so
-		// this j indicates recusion branch, presumably making this j be
-		// r in Algorith 2 and increases by depart_no gives powers of two.
-		// Q:  Is j shifted from r any?
+		// Agrees with for loop (j of Algorithm 2) in (0..2^{k-i-1}) from line 3,
+		// except we've j in (depart_no..size).step_by(2*depart_no), meaning
+		// the doubled step compensated for the halve size exponent, and
+		// somehow this j captures the subscript on \omega_{j 2^{i+1}}.	 (TODO)
 		let mut j = depart_no;
 		while j < size {
+			// At this point loops over i in (j - depart_no)..j give a bredth
+			// first loop across the recursion branches from lines 7 and 8,
+			// so the i loop corresponds to r in Algorithm 2.  In fact,
+			// data[i] and data[i + depart_no] together cover everything,
+			// thanks to the outer j loop.
+
 			// Loop on line 3, so i corresponds to j in Algorithm 2
 			for i in (j - depart_no)..j {
 				// Line 4, justified by (34) page 6288, but
@@ -130,10 +141,12 @@ fn inverse_fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: us
 				data[i + depart_no] ^= data[i];
 			}
 
-			// TODO: Unclear how skew does not depend upon i, maybe the s_i is constant?
-			// Or maybe this craetes a problem?	 Non-constant skew yields an invertable
-			// map, but maybe not an FFT.
+			// Algorithm 2 indexs the skew factor in line 5 page 6288 
+			// by i and \omega_{j 2^{i+1}}, but not by r explicitly.  
+			// We further explore this confusion below. (TODO)
 			let skew = unsafe { SKEW_FACTOR[j + index - 1] };
+			// It's reasonale to skip the loop if skew is zero, but doing so with
+			// all bits set requires justification.	 (TODO)
 			if skew != MODULO {
 				// Again loop on line 3, except skew should depend upon i aka j in Algorithm 2 (TODO)
 				for i in (j - depart_no)..j {
@@ -155,22 +168,38 @@ fn inverse_fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: us
 fn fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: usize) {
 	// All line references to Algorithm 1 page 6287 of 
 	// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
-
-	// Depth of the recursion on line 3 and 4 is given by depart_no aka 1 << (i of Algorithm 1).
+	
+	// Depth of the recursion on line 3 and 4 is given by depart_no
+	// aka 1 << ((k of Algorithm 1) - (i of Algorithm 1)) where
+	// k of Algorithm 1 is read as FIELD_BITS here.
+	// Recusion base layer implicitly imports d_r aka ala line 1.  
+	// After this, we start at depth (i of Algorithm 1) = (k of Algorithm 1) - 1
+	// and progress through FIELD_BITS-1 steps, obtaining \Psi_\beta(0,0).
 	let mut depart_no = size >> 1_usize;
 	while depart_no > 0 {
-		// Bredth first loop across recursions from line 3 and 4, so
-		// this j indicates recusion branch, presumably making this j be
-		// somewhat like r in Algorith 1, in that it increases by depart_no.
+		// Agrees with for loop (j of Algorithm 1) in (0..2^{k-i-1}) from line 5,
+		// except we've j in (depart_no..size).step_by(2*depart_no), meaning
+		// the doubled step compensated for the halve size exponent, and
+		// somehow this j captures the subscript on \omega_{j 2^{i+1}}.	 (TODO)
 		let mut j = depart_no;
 		while j < size {
-			// TODO: Unclear how skew does not depend upon i, maybe the s_i is constant?
-			// Or maybe this craetes a problem?	 Non-constant skew yields an invertable
-			// map, but maybe not an FFT.
+			// At this point loops over i in (j - depart_no)..j give a bredth
+			// first loop across the recursion branches from lines 3 and 4,
+			// so the i loop corresponds to r in Algorithm 1.  In fact,
+			// data[i] and data[i + depart_no] together cover everything,
+			// thanks to the outer j loop.
 
-			// They index the skew in line 6 aka (28) page 6287 by i and j but not by r,
-			// so here we index the skew by 
+			// Algorithm 1 indexs the skew factor in line 6 aka (28) page 6287 
+			// by i and \omega_{j 2^{i+1}}, but not by r explicitly. 
+			// We doubt the lack of explicit dependence upon r justifies 
+			// extracting the skew factor outside the loop here. 
+			// As indexing by \omega_{j 2^{i+1}} appears absolute elsewhere,
+			// we think r actually appears but the skew factor repeats itself
+			// like in (19) in the proof of Lemma 4.  (TODO)
+			// We should understand the rest of this basis story, like (8) too.	 (TODO)
 			let skew = unsafe { SKEW_FACTOR[j + index - 1] };
+			// It's reasonale to skip the loop if skew is zero, but doing so with
+			// all bits set requires justification.	 (TODO)
 			if skew != MODULO {
 				// Loop on line 5, except skew should depend upon i aka j in Algorithm 1 (TODO)
 				for i in (j - depart_no)..j {
@@ -235,7 +264,8 @@ unsafe fn init_dec() {
 		field_base[i - 1] = 1 << i;
 	}
 
-	// 
+	// We construct SKW_FACTOR to be \bar{s}_j(omega) from page 6285
+	// for all omega in the field. 
 	for m in 0..(FIELD_BITS - 1) {
 		let step = 1 << (m + 1);
 		SKEW_FACTOR[(1 << m) - 1] = 0;
@@ -244,12 +274,14 @@ unsafe fn init_dec() {
 
 			let mut j = (1 << m) - 1;
 			while j < s {
-				// Justified by (5) page 6285
+				// Justified by (5) page 6285, except..
+				// we expect SKEW_FACTOR[j ^ field_base[i]] or similar
 				SKEW_FACTOR[j + s] = SKEW_FACTOR[j] ^ field_base[i];
 				j += step;
 			}
 		}
 
+		// 
 		let idx = mul_table(field_base[m], LOG_TABLE[(field_base[m] ^ 1_u16) as usize]);
 		field_base[m] = MODULO - LOG_TABLE[idx as usize];
 
@@ -289,7 +321,7 @@ fn encode_low(data: &[GFSymbol], k: usize, codeword: &mut [GFSymbol], n: usize) 
 	assert_eq!(data.len(), n);
 
 	// k | n is guaranteed
-	assert_eq!( n / k * k,  n);
+	assert_eq!( n / k * k,	n);
 
 	// move the data to the codeword
 	mem_cpy(&mut codeword[0..k], &data[0..k]);

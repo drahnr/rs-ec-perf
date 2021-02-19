@@ -124,7 +124,8 @@ fn inverse_fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: us
 		while j < size {
 			// Loop on line 3, so i corresponds to j in Algorithm 2
 			for i in (j - depart_no)..j {
-				// Line 4, justified by (34) page 6288
+				// Line 4, justified by (34) page 6288, but
+				// adding depart_no acts like the r+2^i superscript.
 				data[i + depart_no] ^= data[i];
 			}
 
@@ -135,11 +136,14 @@ fn inverse_fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: us
 			if skew != MODULO {
 				// Again loop on line 3, except skew should depend upon i aka j in Algorithm 2 (TODO)
 				for i in (j - depart_no)..j {
-					// Line 5, justified by (35) page 6288
+					// Line 5, justified by (35) page 6288, but
+					// adding depart_no acts like the r+2^i superscript.
 					data[i] ^= mul_table(data[i + depart_no], skew);
 				}
 			}
 
+			// Increment by double depart_no in agreement with
+			// our updating 2*depart_no elements at this depth.
 			j += depart_no << 1;
 		}
 		depart_no <<= 1;
@@ -156,25 +160,34 @@ fn fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: usize) {
 	while depart_no > 0 {
 		// Bredth first loop across recursions from line 3 and 4, so
 		// this j indicates recusion branch, presumably making this j be
-		// r in Algorith 1 and increases by depart_no gives powers of two.
+		// somewhat like r in Algorith 1, in that it increases by depart_no.
 		let mut j = depart_no;
 		while j < size {
 			// TODO: Unclear how skew does not depend upon i, maybe the s_i is constant?
 			// Or maybe this craetes a problem?	 Non-constant skew yields an invertable
 			// map, but maybe not an FFT.
+
+			// They index the skew in line 6 aka (28) page 6287 by i and j but not by r,
+			// so here we index the skew by 
 			let skew = unsafe { SKEW_FACTOR[j + index - 1] };
 			if skew != MODULO {
 				// Loop on line 5, except skew should depend upon i aka j in Algorithm 1 (TODO)
 				for i in (j - depart_no)..j {
-					// Line 6, explained by (28) page 6287
+					// Line 6, explained by (28) page 6287, but
+					// adding depart_no acts like the r+2^i superscript.
 					data[i] ^= mul_table(data[i + depart_no], skew);
 				}
 			}
+
 			// Again loop on line 5, so i corresponds to j in Algorithm 1
 			for i in (j - depart_no)..j {
-				// Line 7, explained by (31) page 6287
+				// Line 7, explained by (31) page 6287, but
+				// adding depart_no acts like the r+2^i superscript.
 				data[i + depart_no] ^= data[i];
 			}
+
+			// Increment by double depart_no in agreement with
+			// our updating 2*depart_no elements at this depth.
 			j += depart_no << 1;
 		}
 		depart_no >>= 1;
@@ -221,7 +234,7 @@ unsafe fn init_dec() {
 		field_base[i - 1] = 1 << i;
 	}
 
-    // 
+	// 
 	for m in 0..(FIELD_BITS - 1) {
 		let step = 1 << (m + 1);
 		SKEW_FACTOR[(1 << m) - 1] = 0;
@@ -230,7 +243,7 @@ unsafe fn init_dec() {
 
 			let mut j = (1 << m) - 1;
 			while j < s {
-                // Justified by (5) page 6285
+				// Justified by (5) page 6285
 				SKEW_FACTOR[j + s] = SKEW_FACTOR[j] ^ field_base[i];
 				j += step;
 			}
@@ -245,7 +258,7 @@ unsafe fn init_dec() {
 			field_base[i] = mul_table(field_base[i], b as u16);
 		}
 	}
-    // 
+	// 
 	for i in 0..(MODULO as usize) {
 		SKEW_FACTOR[i] = LOG_TABLE[SKEW_FACTOR[i] as usize];
 	}

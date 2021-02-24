@@ -660,7 +660,7 @@ mod test {
 		// encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
 		// mem_cpy(&mut codeword[..], &data[..]);
 
-        assert!(K + K <= N))
+        assert!(K + K <= N);
 		encode_low(&data[..], K, &mut codeword[..], N);
 
 		println!("Codeword:");

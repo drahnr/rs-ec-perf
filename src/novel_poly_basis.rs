@@ -638,7 +638,8 @@ mod test {
 		//message array
 		let mut data: [GFSymbol; N] = [0; N];
 
-		for i in (N - K)..N {
+		// for i in (N - K)..N {
+        for i in 0..K { 
 			//filled with random numbers
 			data[i] = rand_gf_element();
 		}

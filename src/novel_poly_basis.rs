@@ -645,7 +645,7 @@ mod test {
 
 		assert_eq!(data.len(), N);
 
-		println!("Message(First n-k are zeros): ");
+		println!("Message(Last n-k are zeros): ");
 		for i in 0..N {
 			print!("{:04x} ", data[i]);
 		}
@@ -654,14 +654,13 @@ mod test {
 		//---------encoding----------
 		let mut codeword = [0_u16; N];
 
-		if K + K >= N {
-			let (data_till_t, data_skip_t) = data.split_at_mut(N - K);
-			encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
-		} else {
-			encode_low(&data[..], K, &mut codeword[..], N);
-		}
+		// assert!(K + K >= N);
+		// let (data_till_t, data_skip_t) = data.split_at_mut(N - K);
+		// encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
+		// mem_cpy(&mut codeword[..], &data[..]);
 
-		mem_cpy(&mut codeword[..], &data[..]);
+        assert!(K + K <= N))
+		encode_low(&data[..], K, &mut codeword[..], N);
 
 		println!("Codeword:");
 		for i in 0..N {
@@ -717,12 +716,12 @@ mod test {
 			if erasure[i] {
 				print!("{:04x} ", codeword[i]);
 			} else {
-				print!("XXXX ");
+				print!("{:04x} ", data[i]);
 			};
 		}
 		println!("");
 
-		for i in 0..N {
+		for i in 0..K {
 			//Check the correctness of the result
 			if data[i] != codeword[i] {
 				panic!("Decoding Error! value at [{}] should={:04x} vs is={:04x}", i, data[i], codeword[i]);

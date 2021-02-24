@@ -654,7 +654,7 @@ mod test {
 		//---------encoding----------
 		let mut codeword = [0_u16; N];
 
-		if K + K > N {
+		if K + K >= N {
 			let (data_till_t, data_skip_t) = data.split_at_mut(N - K);
 			encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
 		} else {

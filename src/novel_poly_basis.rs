@@ -598,8 +598,6 @@ pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>) -> Option<Vec<u8>
 
 #[cfg(test)]
 mod test {
-	use rand::seq::index::IndexVec;
-
 	use super::*;
 
 	fn print_sha256(txt: &'static str, data: &[GFSymbol]) {
@@ -703,25 +701,25 @@ mod test {
 
 		//--------erasure simulation---------
 
-		// Array indicating erasures
-		let mut erasure = [false; N];
+        //Array indicating erasures
+    	let mut erasure = [false; N];
+    	for i in 0..(N-K) {
+    		erasure[i] = true;
+        }
 
-		let erasures_iv = if false {
-			// erase random `(N-K)` codewords
-			let mut rng = rand::thread_rng();
-			let erasures_iv: IndexVec = rand::seq::index::sample(&mut rng, N, N - K);
+        //permuting the erasure array
+        if true {
+            use rand::seq::SliceRandom;
+            erasure.shuffle(&mut rand::thread_rng());
+        }
+        assert_eq!(erasure.iter().map(|b| *b as usize).sum::<usize>(), N-K);
 
-			erasures_iv
-		} else {
-			IndexVec::from((0..(N - K)).into_iter().collect::<Vec<usize>>())
-		};
-		assert_eq!(erasures_iv.len(), N - K);
-
-		for i in erasures_iv {
-			//erasure codeword symbols
-			erasure[i] = true;
-			codeword[i] = 0 as GFSymbol;
-		}
+        //erasure codeword symbols
+    	for i in 0..N {
+    		if erasure[i] {
+                 codeword[i] = 0;
+            }
+        }
 
 		print_sha256("erased", &codeword);
 

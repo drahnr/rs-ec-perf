@@ -388,15 +388,15 @@ fn eval_error_polynomial(erasure: &[bool], log_walsh2: &mut [GFSymbol], n: usize
 	for i in 0..z {
 		log_walsh2[i] = erasure[i] as GFSymbol;
 	}
-	for i in z..N {
+	for i in z..n {
 		log_walsh2[i] = 0 as GFSymbol;
 	}
-	walsh(log_walsh2, FIELD_SIZE);
+	walsh(log_walsh2, n);
 	for i in 0..n {
 		let tmp = log_walsh2[i] as u32 * unsafe { LOG_WALSH[i] } as u32;
 		log_walsh2[i] = (tmp % MODULO as u32) as GFSymbol;
 	}
-	walsh(log_walsh2, FIELD_SIZE);
+	walsh(log_walsh2, n);
 	for i in 0..z {
 		if erasure[i] {
 			log_walsh2[i] = MODULO - log_walsh2[i];
@@ -554,10 +554,10 @@ pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>) -> Option<Vec<u8>
 	let recover_up_to = N; // the first k would suffice for the original k message codewords
 
 	//---------Erasure decoding----------------
-	let mut log_walsh2: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
+	let mut log_walsh2: [GFSymbol; N] = [0_u16; N];
 
 	// Evaluate error locator polynomial
-	eval_error_polynomial(&erasures[..], &mut log_walsh2[..], FIELD_SIZE);
+	eval_error_polynomial(&erasures[..], &mut log_walsh2[..], N);
 
 	//---------main processing----------
 	decode_main(&mut codeword[..], recover_up_to, &erasures[..], &log_walsh2[..], N);

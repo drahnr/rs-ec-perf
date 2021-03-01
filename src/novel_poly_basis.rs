@@ -86,7 +86,7 @@ fn walsh(data: &mut [GFSymbol], size: usize) {
 //formal derivative of polynomial in the new basis
 fn formal_derivative(cos: &mut [GFSymbol], size: usize) {
 	for i in 1..size {
-		let length = ((i ^ i - 1) + 1) >> 1;
+		let length = ((i ^ (i - 1)) + 1) >> 1;
 		for j in (i - length)..i {
 			cos[j] ^= cos.get(j + length).copied().unwrap_or_default();
 		}

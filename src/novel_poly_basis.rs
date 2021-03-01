@@ -221,7 +221,6 @@ fn fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: usize) {
 		}
 		depart_no >>= 1;
 	}
-	return;
 }
 
 //initialize LOG_TABLE[], EXP_TABLE[]
@@ -319,6 +318,9 @@ fn encode_low(data: &[GFSymbol], k: usize, codeword: &mut [GFSymbol], n: usize) 
 	assert_eq!(codeword.len(), n);
 	assert_eq!(data.len(), n);
 
+	assert!(is_power_of_2(n));
+	assert!(is_power_of_2(k));
+
 	// k | n is guaranteed
 	assert_eq!((n / k) * k, n);
 
@@ -382,8 +384,12 @@ fn encode_high(data: &[GFSymbol], k: usize, parity: &mut [GFSymbol], mem: &mut [
 // `fn decode_init`
 // since this has only to be called once per reconstruction
 fn eval_error_polynomial(erasure: &[bool], log_walsh2: &mut [GFSymbol], n: usize) {
-	for i in 0..n {
+	let z = std::cmp::min(n,erasure.len());
+	for i in 0..z {
 		log_walsh2[i] = erasure[i] as GFSymbol;
+	}
+	for i in z..N {
+		log_walsh2[i] = 0 as GFSymbol;
 	}
 	walsh(log_walsh2, FIELD_SIZE);
 	for i in 0..n {
@@ -391,7 +397,7 @@ fn eval_error_polynomial(erasure: &[bool], log_walsh2: &mut [GFSymbol], n: usize
 		log_walsh2[i] = (tmp % MODULO as u32) as GFSymbol;
 	}
 	walsh(log_walsh2, FIELD_SIZE);
-	for i in 0..n {
+	for i in 0..z {
 		if erasure[i] {
 			log_walsh2[i] = MODULO - log_walsh2[i];
 		}
@@ -407,7 +413,7 @@ fn decode_main(codeword: &mut [GFSymbol], k: usize, erasure: &[bool], log_walsh2
 	// technically we only need to recover
 	// the first `k` instead of all `n` which
 	// would include parity chunks.
-	let recover_up_to = k;
+	let recover_up_to = n;
 
 	for i in 0..n {
 		codeword[i] = if erasure[i] { 0_u16 } else { mul_table(codeword[i], log_walsh2[i]) };
@@ -421,22 +427,22 @@ fn decode_main(codeword: &mut [GFSymbol], k: usize, erasure: &[bool], log_walsh2
 		codeword[i + 1] = mul_table(codeword[i + 1], b);
 	}
 
-	formal_derivative(codeword, recover_up_to);
+	formal_derivative(codeword, n);
 
-	for i in (0..recover_up_to).into_iter().step_by(2) {
+	for i in (0..n).into_iter().step_by(2) {
 		let b = unsafe { B[i >> 1] };
 		codeword[i] = mul_table(codeword[i], b);
 		codeword[i + 1] = mul_table(codeword[i + 1], b);
 	}
 
-	fft_in_novel_poly_basis(codeword, recover_up_to, 0);
+	fft_in_novel_poly_basis(codeword, n, 0);
 
 	for i in 0..recover_up_to {
 		codeword[i] = if erasure[i] { mul_table(codeword[i], log_walsh2[i]) } else { 0_u16 };
 	}
 }
 
-const N: usize = FIELD_SIZE;
+const N: usize = 32;
 const K: usize = 4;
 
 use itertools::Itertools;
@@ -551,7 +557,7 @@ pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>) -> Option<Vec<u8>
 	let mut log_walsh2: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
 
 	// Evaluate error locator polynomial
-	eval_error_polynomial(&erasures[..], &mut log_walsh2[..], N);
+	eval_error_polynomial(&erasures[..], &mut log_walsh2[..], FIELD_SIZE);
 
 	//---------main processing----------
 	decode_main(&mut codeword[..], recover_up_to, &erasures[..], &log_walsh2[..], N);
@@ -706,13 +712,14 @@ mod test {
 
 		//---------Erasure decoding----------------
 		let mut log_walsh2: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
-		eval_error_polynomial(&erasure[..], &mut log_walsh2[..], N);
+
+		eval_error_polynomial(&erasure[..], &mut log_walsh2[..], FIELD_SIZE);
 
 		print_sha256("log_walsh2", &log_walsh2);
 
 		decode_main(&mut codeword[..], K, &erasure[..], &log_walsh2[..], N);
 
-		print_sha256("decoded", &codeword);
+		print_sha256("decoded", &codeword[0..K]);
 
 		println!("Decoded result:");
 /*
@@ -724,7 +731,7 @@ mod test {
 			};
         }
 */
-		for i in 0..(K + 5) {
+		for i in 0..N {
 			// the data word plus a few more
 			print!("{:04x} ", codeword[i]);
 		}
@@ -733,9 +740,13 @@ mod test {
 		for i in 0..K {
 			//Check the correctness of the result
 			if data[i] != codeword[i] {
-				panic!("Decoding Error! value at [{}] should={:04x} vs is={:04x}", i, data[i], codeword[i]);
+				println!("🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍🐍");
+				panic!("Decoding ERROR! value at [{}] should={:04x} vs is={:04x}", i, data[i], codeword[i]);
 			}
 		}
-		println!("Decoding is successful!");
+		println!(r#">>>>>>>>> 🎉🎉🎉🎉
+>>>>>>>>> > Decoding is **SUCCESS** ful! 🎈
+>>>>>>>>>"#);
+
 	}
 }

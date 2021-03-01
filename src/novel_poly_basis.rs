@@ -124,7 +124,13 @@ fn inverse_fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: us
 		// Agrees with for loop (j of Algorithm 2) in (0..2^{k-i-1}) from line 3,
 		// except we've j in (depart_no..size).step_by(2*depart_no), meaning
 		// the doubled step compensated for the halve size exponent, and
-		// somehow this j captures the subscript on \omega_{j 2^{i+1}}.	 (TODO)
+		// this j captures the subscript on \omega_{j 2^{i+1}}.
+		//
+		// We observe that Section II A on page 6285 defines
+		//	 \omega_i = i_0 v_0 + i_1 v_1 + ... i_{m-1} v_{m-1}
+		// where i=i_0 + 2 i_1 + .. + 2^{m-1} i_{m-1}.	
+		// So \omega_{j 2^{i-1}} means exactly this but with j left shifted
+		// by i-1 bits, which corresponds to the range the code's j takes.
 		let mut j = depart_no;
 		while j < size {
 			// At this point loops over i in (j - depart_no)..j give a bredth
@@ -141,7 +147,9 @@ fn inverse_fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: us
 			}
 
 			// Algorithm 2 indexs the skew factor in line 5 page 6288 
-			// by i and \omega_{j 2^{i+1}}, but not by r explicitly.  
+			// by i and \omega_{j 2^{i+1}}, but not upon the branch r of the
+			// recursion, so not on i in the code.	At the same time, the
+			// recursive formulation shifts \Delta^r_i( \omega_{j 2^{i+1}} ).
 			// We further explore this confusion below. (TODO)
 			let skew = unsafe { SKEW_FACTOR[j + index - 1] };
 			// It's reasonale to skip the loop if skew is zero, but doing so with
@@ -179,7 +187,13 @@ fn fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: usize) {
 		// Agrees with for loop (j of Algorithm 1) in (0..2^{k-i-1}) from line 5,
 		// except we've j in (depart_no..size).step_by(2*depart_no), meaning
 		// the doubled step compensated for the halve size exponent, and
-		// somehow this j captures the subscript on \omega_{j 2^{i+1}}.	 (TODO)
+		// this j captures the subscript on \omega_{j 2^{i+1}}. 
+		//
+		// We observe that Section II A on page 6285 defines
+		//	 \omega_i = i_0 v_0 + i_1 v_1 + ... i_{m-1} v_{m-1}
+		// where i=i_0 + 2 i_1 + .. + 2^{m-1} i_{m-1}.	
+		// So \omega_{j 2^{i-1}} means exactly this but with j left shifted
+		// by i-1 bits, which corresponds to the range the code's j takes.
 		let mut j = depart_no;
 		while j < size {
 			// At this point loops over i in (j - depart_no)..j give a bredth
@@ -189,13 +203,14 @@ fn fft_in_novel_poly_basis(data: &mut [GFSymbol], size: usize, index: usize) {
 			// thanks to the outer j loop.
 
 			// Algorithm 1 indexs the skew factor in line 6 aka (28) page 6287 
-			// by i and \omega_{j 2^{i+1}}, but not by r explicitly. 
-			// We doubt the lack of explicit dependence upon r justifies 
-			// extracting the skew factor outside the loop here. 
-			// As indexing by \omega_{j 2^{i+1}} appears absolute elsewhere,
-			// we think r actually appears but the skew factor repeats itself
-			// like in (19) in the proof of Lemma 4.  (TODO)
-			// We should understand the rest of this basis story, like (8) too.	 (TODO)
+			// by i and \omega_{j 2^{i+1}}, but not upon the branch r of the
+			// recursion, so not on i in the code.	At the same time, the
+			// recursive formulation shifts \Delta^r_i( \omega_{j 2^{i+1}} ).
+			//
+			// I've not yet understood why our skew factors never change with
+			// depth, except that they begin deeper with larger j initialized
+			// to depart_no, which gets doubled.   Any chance the skew factor 
+			// repeats itself via like in (19) in the proof of Lemma 4,	 (TODO) 
 			let skew = unsafe { SKEW_FACTOR[j + index - 1] };
 			// It's reasonale to skip the loop if skew is zero, but doing so with
 			// all bits set requires justification.	 (TODO)

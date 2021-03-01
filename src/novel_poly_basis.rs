@@ -481,8 +481,8 @@ pub fn encode(data: &[u8]) -> Vec<WrappedShard> {
 
 	assert!(K <= N / 2);
 	// if K + K > N {
-	// 	let (data_till_t, data_skip_t) = data.split_at_mut(N - K);
-	// 	encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
+	//	let (data_till_t, data_skip_t) = data.split_at_mut(N - K);
+	//	encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
 	// } else {
 	encode_low(&data[..], K, &mut codeword[..], N);
 	// }
@@ -658,7 +658,7 @@ mod test {
 		let mut data: [GFSymbol; N] = [0; N];
 
 		// for i in (N - K)..N {
-        for i in 0..K { 
+		for i in 0..K { 
 			//filled with random numbers
 			data[i] = (i * i % MODULO as usize) as u16;
 			// data[i] = rand_gf_element();
@@ -681,7 +681,7 @@ mod test {
 		// encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
 		// mem_cpy(&mut codeword[..], &data[..]);
 
-        assert!(K + K <= N);
+		assert!(K + K <= N);
 		encode_low(&data[..], K, &mut codeword[..], N);
 
 		print_sha256("encoded", &codeword);
@@ -729,7 +729,7 @@ mod test {
 			} else {
 				print!("{:04x} ", data[i]);
 			};
-        }
+		}
 */
 		for i in 0..N {
 			// the data word plus a few more

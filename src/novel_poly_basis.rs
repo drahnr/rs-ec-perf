@@ -557,7 +557,7 @@ pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>) -> Option<Vec<u8>
 	let mut log_walsh2: [GFSymbol; N] = [0_u16; N];
 
 	// Evaluate error locator polynomial
-	eval_error_polynomial(&erasures[..], &mut log_walsh2[..], N);
+	eval_error_polynomial(&erasures[..], &mut log_walsh2[..], FIELD_SIZE);
 
 	//---------main processing----------
 	decode_main(&mut codeword[..], recover_up_to, &erasures[..], &log_walsh2[..], N);

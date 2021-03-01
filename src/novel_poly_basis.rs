@@ -23,14 +23,15 @@ const BASE: [GFSymbol; FIELD_BITS] =
 
 const FIELD_SIZE: usize = 1_usize << FIELD_BITS;
 
-const MODULO: GFSymbol = (FIELD_SIZE - 1) as GFSymbol;	// All bits set
+const FIELD_MODULO: GFSymbol = (FIELD_SIZE - 1) as GFSymbol;	// All bits set
+const MODULO: GFSymbol = (N - 1) as GFSymbol;	// All bits set
 
 static mut LOG_TABLE: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
 static mut EXP_TABLE: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
 
 //-----Used in decoding procedure-------
 //twisted factors used in FFT
-static mut SKEW_FACTOR: [GFSymbol; MODULO as usize] = [0_u16; MODULO as usize];
+static mut SKEW_FACTOR: [GFSymbol; FIELD_MODULO as usize] = [0_u16; FIELD_MODULO as usize];
 
 //factors used in formal derivative
 static mut B: [GFSymbol; FIELD_SIZE >> 1] = [0_u16; FIELD_SIZE >> 1];
@@ -324,7 +325,7 @@ unsafe fn init_dec() {
 
 	mem_cpy(&mut LOG_WALSH[..], &LOG_TABLE[..]);
 	LOG_WALSH[0] = 0;
-	walsh(&mut LOG_WALSH[..], FIELD_SIZE);
+	walsh(&mut LOG_WALSH[..], N);
 }
 
 // Encoding alg for k/n < 0.5: message is a power of two
@@ -572,7 +573,7 @@ pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>) -> Option<Vec<u8>
 	let mut log_walsh2: [GFSymbol; N] = [0_u16; N];
 
 	// Evaluate error locator polynomial
-	eval_error_polynomial(&erasures[..], &mut log_walsh2[..], FIELD_SIZE);
+	eval_error_polynomial(&erasures[..], &mut log_walsh2[..], N);
 
 	//---------main processing----------
 	decode_main(&mut codeword[..], recover_up_to, &erasures[..], &log_walsh2[..], N);
@@ -726,9 +727,9 @@ mod test {
 		print_sha256("erased", &codeword);
 
 		//---------Erasure decoding----------------
-		let mut log_walsh2: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
+		let mut log_walsh2: [GFSymbol; N] = [0_u16; N];
 
-		eval_error_polynomial(&erasure[..], &mut log_walsh2[..], FIELD_SIZE);
+		eval_error_polynomial(&erasure[..], &mut log_walsh2[..], N);
 
 		print_sha256("log_walsh2", &log_walsh2);
 

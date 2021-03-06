@@ -24,10 +24,17 @@ thiserror = "1.0.23"
 rand = { version = "0.8", features = ["alloc"] }
 itertools = "0.10"
 sha2 = "0.9"
+assert_matches = "1"
 
 [dev-dependencies]
 iai = "0.1"
 criterion = "0.3"
+
+[features]
+default = []
+cmp-with-cxx = []
+status-quo = []
+
 
 [profile.bench]
 debug = true
@@ -51,5 +58,5 @@ bench = true
 
 [workspace]
 members = [
-    "fuzzit"
+     "fuzzit"
 ]

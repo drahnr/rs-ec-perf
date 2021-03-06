@@ -1,76 +1,113 @@
+pub static SMALL_RNG_SEED: [u8; 32] = [
+	0, 6, 0xFA, 0, 0x37, 3, 19, 89, 32, 032, 0x37, 0x77, 77, 0b11, 112, 52, 12, 40, 82, 34, 0, 0, 0, 1, 4, 4, 1, 4, 99,
+	127, 121, 107,
+];
+
+pub mod errors;
+pub use errors::*;
+
 mod wrapped_shard;
 
 use rand::prelude::*;
+use rand::seq::index::IndexVec;
+
 pub use wrapped_shard::*;
 
+#[cfg(feature = "status-quo")]
 pub mod status_quo;
 
 pub mod novel_poly_basis;
+#[cfg(feature = "cmp-with-cxx")]
 pub mod novel_poly_basis_cxx;
 
-// we want one message per validator, so this is the total number of shards that we should own
-// after
-pub const N_VALIDATORS: usize = 32; //256;
-pub const DATA_SHARDS: usize = 4; // N_VALIDATORS / 3;
-pub const PARITY_SHARDS: usize = N_VALIDATORS - DATA_SHARDS;
+pub const N_VALIDATORS: usize = 2000;
 
 pub const BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rand_data.bin"));
 
-pub fn roundtrip<E, R>(encode: E, reconstruct: R, payload: &[u8])
-where
-E: for<'r> Fn(&'r [u8]) -> Vec<WrappedShard>,
-R: Fn(Vec<Option<WrappedShard>>) -> Option<Vec<u8>>,
-{
-	let mut rng = SmallRng::from_seed([0, 6, 0xFA, 0,
-		0x37, 3, 19, 89,
-		32, 032, 0x37, 0x77,
-		77, 0b11, 112, 52,
-		12, 40, 82, 34,
-		0, 0, 0, 1,
-		4, 4, 1, 4,
-		99, 127, 121, 107]);
+/// Assert the byte ranges derived from the index vec are recovered properly
+pub fn assert_recovery(payload: &[u8], reconstructed_payload: &[u8], dropped_indices: IndexVec) {
+	assert!(reconstructed_payload.len() >= payload.len());
 
-	let drop_random = move |shards: &mut [Option<WrappedShard>], n: usize, k: usize| {
-		let iv = rand::seq::index::sample(&mut rng, n, n - k);
-		iv.into_iter().for_each(|idx| { shards[idx] = None; });
-	};
-	roundtrip_w_drop_closure::<E,R,_>(encode, reconstruct, payload, drop_random)
+	dropped_indices.into_iter().for_each(|dropped_idx| {
+		let byteoffset = dropped_idx * 2;
+		let range = byteoffset..(byteoffset + 2);
+		// dropped indices are over `n`, but our data indices are just of length `k * 2`
+		if payload.len() >= range.end {
+			assert_eq!(
+				&payload[range.clone()],
+				&reconstructed_payload[range.clone()],
+				"Data at bytes {:?} must match:",
+				range
+			);
+		}
+	});
 }
 
-pub fn roundtrip_w_drop_closure<E, R, F>(encode: E, reconstruct: R, payload: &[u8], mut drop_rand: F )
-where
-	E: for<'r> Fn(&'r [u8]) -> Vec<WrappedShard>,
-	R: Fn(Vec<Option<WrappedShard>>) -> Option<Vec<u8>>,
-	F: for<'z> FnMut(&'z mut [Option<WrappedShard>], usize, usize),
-{
+pub fn drop_random_max(shards: &mut [Option<WrappedShard>], n: usize, k: usize, rng: &mut impl rand::Rng) -> IndexVec {
+	let l = shards.len();
+	let already_dropped = n.saturating_sub(l);
+	let iv = rand::seq::index::sample(rng, l, n - k - already_dropped);
+	assert_eq!(iv.len(), n - k);
+	iv.clone().into_iter().for_each(|idx| {
+		shards[idx] = None;
+	});
+	let kept_count = shards.iter().map(Option::is_some).count();
+	assert!(kept_count >= k);
+	iv
+}
 
-	assert!(DATA_SHARDS >= payload.len() / 2);
+pub fn roundtrip<E, R>(encode: E, reconstruct: R, payload: &[u8], validator_count: usize) -> Result<()>
+where
+	E: for<'r> Fn(&'r [u8], usize) -> Result<Vec<WrappedShard>>,
+	R: Fn(Vec<Option<WrappedShard>>, usize) -> Result<Vec<u8>>,
+{
+	let v =
+		roundtrip_w_drop_closure::<E, R, _, SmallRng>(encode, reconstruct, payload, validator_count, drop_random_max)?;
+	Ok(v)
+}
+
+pub fn roundtrip_w_drop_closure<E, R, F, G>(
+	encode: E,
+	reconstruct: R,
+	payload: &[u8],
+	validator_count: usize,
+	mut drop_rand: F,
+) -> Result<()>
+where
+	E: for<'r> Fn(&'r [u8], usize) -> Result<Vec<WrappedShard>>,
+	R: Fn(Vec<Option<WrappedShard>>, usize) -> Result<Vec<u8>>,
+	F: for<'z> FnMut(&'z mut [Option<WrappedShard>], usize, usize, &mut G) -> IndexVec,
+	G: rand::Rng + rand::SeedableRng<Seed = [u8; 32]>,
+{
+	let mut rng = <G as rand::SeedableRng>::from_seed(SMALL_RNG_SEED);
+
 	// Construct the shards
-	let encoded = encode(payload);
+	let shards = encode(payload, validator_count)?;
 
 	// Make a copy and transform it into option shards arrangement
 	// for feeding into reconstruct_shards
-	let mut shards = encoded.clone().into_iter().map(Some).collect::<Vec<_>>();
+	let mut received_shards = shards.into_iter().map(Some).collect::<Vec<Option<WrappedShard>>>();
 
-	drop_rand(shards.as_mut_slice(), N_VALIDATORS, DATA_SHARDS);
+	let dropped_indices = drop_rand(received_shards.as_mut_slice(), validator_count, validator_count / 3, &mut rng);
 
-	let result = reconstruct(shards).expect("reconstruction must work");
+	let recovered_payload = reconstruct(received_shards, validator_count)?;
 
-	// the result might have trailing zeros or non matching trailing data
-	assert_eq!(&payload[..], &result[0..payload.len()]);
+	assert_recovery(&payload[..], &recovered_payload[..], dropped_indices);
+	Ok(())
 }
 
 #[cfg(test)]
 mod test {
 	use super::*;
 
+	#[cfg(feature = "status-quo")]
 	#[test]
-	fn status_quo_roundtrip() {
-		roundtrip(status_quo::encode, status_quo::reconstruct, &BYTES[0..(DATA_SHARDS<<1)])
+	fn status_quo_roundtrip() -> Result<()> {
+		roundtrip(status_quo::encode, status_quo::reconstruct, &BYTES[..1337], N_VALIDATORS)
 	}
 
 	#[test]
-	fn novel_poly_basis_roundtrip() {
-		roundtrip(novel_poly_basis::encode, novel_poly_basis::reconstruct, &BYTES[0..(DATA_SHARDS<<1)])
+	fn novel_poly_basis_roundtrip() -> Result<()> {
+		roundtrip(novel_poly_basis::encode, novel_poly_basis::reconstruct, &BYTES[..1337], N_VALIDATORS)
 	}
 }

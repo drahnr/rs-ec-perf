@@ -25,6 +25,15 @@ name = "arbitrary"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "698b65a961a9d730fb45b6b0327e20207810c9f61ee421b082b27ba003f49e2b"
+dependencies = [
+ "derive_arbitrary",
+]
+
+[[package]]
+name = "assert_matches"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
 
 [[package]]
 name = "atty"
@@ -274,6 +283,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive_arbitrary"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df89dd0d075dea5cc5fdd6d5df6b8a61172a710b3efac1d6bdb9dd8b78f82c1a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -311,6 +331,7 @@ checksum = "bcd1163ae48bda72a20ae26d66a04d3094135cadab911cff418ae5e33f253431"
 name = "fuzzit"
 version = "0.1.0"
 dependencies = [
+ "arbitrary",
  "honggfuzz",
  "itertools 0.10.0",
  "rand",
@@ -363,9 +384,9 @@ dependencies = [
 
 [[package]]
 name = "honggfuzz"
-version = "0.5.53"
+version = "0.5.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "020c2f0e11b41a58d4188cf343d0f0364a006c5d629539c5483d3cdebe42fc1e"
+checksum = "bea09577d948a98a5f59b7c891e274c4fb35ad52f67782b3d0cb53b9c05301f1"
 dependencies = [
  "arbitrary",
  "lazy_static",
@@ -700,6 +721,7 @@ checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
 name = "rs-ec-perf"
 version = "0.1.0"
 dependencies = [
+ "assert_matches",
  "bindgen",
  "cc",
  "criterion",

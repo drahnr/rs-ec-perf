@@ -31,7 +31,8 @@ iai = "0.1"
 criterion = "0.3"
 
 [features]
-default = []
+default = ["b_not_one"]
+b_not_one = []
 cmp-with-cxx = []
 status-quo = []
 

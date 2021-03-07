@@ -42,7 +42,7 @@ static mut LOG_WALSH: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
 pub fn mul_table(a: GFSymbol, b: GFSymbol) -> GFSymbol {
 	if a != 0_u16 {
 		unsafe {
-			let ab_log = LOG_TABLE[a as usize] as u32 + b as u32;
+			let ab_log = (LOG_TABLE[a as usize] as u32) + b as u32;
 			let offset = (ab_log & ONEMASK as u32) + (ab_log >> FIELD_BITS);
 			EXP_TABLE[offset as usize]
 		}
@@ -489,7 +489,7 @@ struct ReedSolomon {
 
 impl ReedSolomon {
 	/// Create a new reed solomon erasure encoding wrapper
-	fn new(validator_count: usize) -> ReedSolomon {
+	fn new_third_plus_epsilon(validator_count: usize) -> ReedSolomon {
 		// we need to be able to reconstruct from 1/3 - eps
 		let k = validator_count / 3;
 		let k = next_lower_power_of_2(k);
@@ -508,7 +508,7 @@ pub fn encode(bytes: &[u8], validator_count: usize) -> Result<Vec<WrappedShard>>
 	}
 
 	setup();
-	let rs = ReedSolomon::new(validator_count);
+	let rs = ReedSolomon::new_third_plus_epsilon(validator_count);
 
 	// setup the shards, n is likely _larger_, so use the truely required number of shards
 
@@ -550,7 +550,7 @@ pub fn reconstruct(
 ) -> Result<Vec<u8>>
 {
 	setup();
-	let rs = ReedSolomon::new(validator_count);
+	let rs = ReedSolomon::new_third_plus_epsilon(validator_count);
 
 	let gap = rs.n.saturating_sub(received_shards.len());
 	let received_shards = received_shards
@@ -729,7 +729,7 @@ mod test {
 	fn b_is_one() {
 		let n = FIELD_SIZE >> 1;
 		// Everything
-		for i in (0..n) {
+		// for i in (0..n) {
 		// Just like in decode_main
 		for i in (0..n).into_iter().step_by(2) {
 			let b = ONEMASK - unsafe { B[i >> 1] };
@@ -789,7 +789,7 @@ mod test {
 	#[test]
 	fn k_n_construction() {
 		for validator_count in 3_usize..=8200 {
-			let ReedSolomon { n, k } = ReedSolomon::new(validator_count);
+			let ReedSolomon { n, k } = ReedSolomon::new_third_plus_epsilon(validator_count);
 
 			assert!(validator_count <= n);
 			assert!(validator_count / 3 >= k);
@@ -893,7 +893,7 @@ mod test {
 		const K2: usize = K * 2;
 
 		// assure the derived sizes match
-		let rs = ReedSolomon::new(N_VALIDATORS);
+		let rs = ReedSolomon::new_third_plus_epsilon(N_VALIDATORS);
 		assert_eq!(rs.n, N);
 		assert_eq!(rs.k, K);
 
@@ -944,7 +944,7 @@ mod test {
 		const K2: usize = K * 2;
 
 		// assure the derived sizes match
-		let rs = ReedSolomon::new(N_VALIDATORS);
+		let rs = ReedSolomon::new_third_plus_epsilon(N_VALIDATORS);
 		assert_eq!(rs.n, N);
 		assert_eq!(rs.k, K);
 

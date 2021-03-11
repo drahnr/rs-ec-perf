@@ -22,7 +22,7 @@ mod f2e8 {
 mod f2e16 {
     use super::write_const;
     include!("src/f2e16.rs");
-    include!("src/f_log_exp.rs");    
+    include!("src/f_build.rs");    
 }
 
 /// Create tables file

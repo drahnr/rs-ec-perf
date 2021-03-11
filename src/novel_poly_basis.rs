@@ -13,11 +13,11 @@ use super::f2e16::*;
 
 //-----Used in decoding procedure-------
 //twisted factors used in FFT
-static mut SKEW_FACTOR: [GFSymbol; ONEMASK as usize] = [0_u16; ONEMASK as usize];
+static mut SKEW_FACTOR: [Multiplier; ONEMASK as usize] = [Multiplier(0); ONEMASK as usize];
 
 //factors used in formal derivative
 #[cfg(test)]
-static mut B: [Multiplier; FIELD_SIZE >> 1] = [Multiplier(0_u16); FIELD_SIZE >> 1];
+static mut B: [Multiplier; FIELD_SIZE >> 1] = [Multiplier(0); FIELD_SIZE >> 1];
 
 pub const fn log2(mut x: usize) -> usize {
 	let mut o: usize = 0;
@@ -92,7 +92,7 @@ pub fn inverse_afft_in_novel_poly_basis(data: &mut [Additive], size: usize, inde
 			// Algorithm 2 indexs the skew factor in line 5 page 6288
 			// by i and \omega_{j 2^{i+1}}, but not by r explicitly.
 			// We further explore this confusion below. (TODO)
-			let skew = Multiplier(unsafe { SKEW_FACTOR[j + index - 1] });
+			let skew = unsafe { SKEW_FACTOR[j + index - 1] };
 			// It's reasonale to skip the loop if skew is zero, but doing so with
 			// all bits set requires justification.	 (TODO)
 			if skew.0 != ONEMASK {
@@ -145,7 +145,7 @@ pub fn afft_in_novel_poly_basis(data: &mut [Additive], size: usize, index: usize
 			// we think r actually appears but the skew factor repeats itself
 			// like in (19) in the proof of Lemma 4.  (TODO)
 			// We should understand the rest of this basis story, like (8) too.	 (TODO)
-			let skew = Multiplier(unsafe { SKEW_FACTOR[j + index - 1] });
+			let skew = unsafe { SKEW_FACTOR[j + index - 1] };
 			// It's reasonale to skip the loop if skew is zero, but doing so with
 			// all bits set requires justification.	 (TODO)
 			if skew.0 != ONEMASK {
@@ -228,7 +228,7 @@ unsafe fn init_dec() {
 	// Convert SKEW_FACTOR from Additive to Multiplier form
 	for i in 0..(ONEMASK as usize) {
 		// SKEW_FACTOR[i] = LOG_TABLE[SKEW_FACTOR[i] as usize];
-		SKEW_FACTOR[i] = skew_factor[i].to_multiplier().0;
+		SKEW_FACTOR[i] = skew_factor[i].to_multiplier();
 	}
 
 	#[cfg(test)]

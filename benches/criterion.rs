@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use rs_ec_perf::*;
+
+use reed_solomon_tester::*;
 
 /// Create a new testset for a particular RS encoding.
 macro_rules! instanciate_upper_bound_test {
@@ -18,8 +19,7 @@ macro_rules! instanciate_upper_bound_test {
 
 			use crate::drop_random_max;
 			use crate::$mp::{encode, reconstruct};
-			use crate::WrappedShard;
-			use crate::{BYTES, SMALL_RNG_SEED};
+			use reed_solomon_tester::{BYTES, SMALL_RNG_SEED};
 			use criterion::{black_box, Criterion};
 			use rand::{rngs::SmallRng, SeedableRng};
 
@@ -39,12 +39,12 @@ macro_rules! instanciate_upper_bound_test {
 			pub fn bench_reconstruct(crit: &mut Criterion) {
 				crit.bench_function(concat!($name, " decode upper bound"), |b| {
 					let encoded = encode(&BYTES[..PAYLOAD_SIZE_CUTOFF], VALIDATOR_COUNT).unwrap();
-					let shards = encoded.clone().into_iter().map(Some).collect::<Vec<Option<WrappedShard>>>();
+					let shards = encoded.clone().into_iter().map(Some).collect::<Vec<Option<_>>>();
 
 					let mut rng = SmallRng::from_seed(SMALL_RNG_SEED);
 
 					b.iter(|| {
-						let mut shards2: Vec<Option<WrappedShard>> = shards.clone();
+						let mut shards2: Vec<Option<_>> = shards.clone();
 						drop_random_max(&mut shards2[..], VALIDATOR_COUNT, VALIDATOR_COUNT / 3, &mut rng);
 						let _ = reconstruct(black_box(shards2), VALIDATOR_COUNT);
 					})
@@ -55,23 +55,22 @@ macro_rules! instanciate_upper_bound_test {
 }
 
 pub mod tests {
-	instanciate_upper_bound_test!("novel poly", novel_poly_basis);
+	#[cfg(feature = "novelpoly")]
+	instanciate_upper_bound_test!("novelpoly", novelpoly);
 
 	#[cfg(feature = "naive")]
-	instanciate_upper_bound_test!("status quo", status_quo);
+	instanciate_upper_bound_test!("naive", naive);
 }
 
 pub mod parameterized {
-	use std::ops::Range;
-
-	use crate::drop_random_max;
-	use crate::WrappedShard;
-	use crate::{BYTES, SMALL_RNG_SEED};
 	use criterion::{black_box, BenchmarkId, Criterion};
+
+	use std::ops::Range;
+	use reed_solomon_tester::{BYTES, SMALL_RNG_SEED, drop_random_max};
 	use rand::{rngs::SmallRng, SeedableRng};
 
-	const STEPS_VALIDATORS: usize = 3;
-	const STEPS_PAYLOAD: usize = 7;
+	const STEPS_VALIDATORS: usize = 4;
+	const STEPS_PAYLOAD: usize = 10;
 
 	pub fn steped(range: Range<usize>, steps: usize) -> impl Iterator<Item = usize> {
 		assert!(steps > 1);
@@ -178,7 +177,7 @@ pub mod parameterized {
 					let shards = encoded.clone().into_iter().map(Some).collect::<Vec<_>>();
 
 					b.iter(|| {
-						let mut shards2: Vec<Option<WrappedShard>> = shards.clone();
+						let mut shards2: Vec<Option<_>> = shards.clone();
 						drop_random_max(&mut shards2[..], validator_count, validator_count / 3, rng);
 						let _ = reconstruct(black_box(shards2), black_box(validator_count));
 					})
@@ -198,7 +197,7 @@ pub mod parameterized {
 					let shards = encoded.clone().into_iter().map(Some).collect::<Vec<_>>();
 
 					b.iter(|| {
-						let mut shards2: Vec<Option<WrappedShard>> = shards.clone();
+						let mut shards2: Vec<Option<_>> = shards.clone();
 						drop_random_max(&mut shards2[..], validator_count, validator_count / 3, rng);
 						let _ = reconstruct(black_box(shards2), black_box(validator_count));
 					})

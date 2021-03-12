@@ -21,7 +21,7 @@ iai = "0.1"
 criterion = "0.3"
 
 [features]
-default = []
+default = ["novelpoly"]
 novelpoly = ["reed-solomon-novelpoly"]
 novelpoly-cxx = ["reed-solomon-novelpoly/with-alt-cxx-impl", "novelpoly"]
 naive = ["reed-solomon-erasure"]

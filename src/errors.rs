@@ -1,3 +1,6 @@
+
+// TODO: Inclide CodeParams struct, not n and k ??
+// TODO: Remove the word validator
 #[non_exhaustive]
 #[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
 pub enum Error {

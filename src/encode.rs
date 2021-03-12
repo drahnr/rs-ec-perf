@@ -5,8 +5,8 @@ pub fn encode_low(data: &[Additive], k: usize, codeword: &mut [Additive], n: usi
 	assert_eq!(codeword.len(), n);
 	assert_eq!(data.len(), n);
 
-	assert!(is_power_of_2(n));
-	assert!(is_power_of_2(k));
+	assert!(is_nonzero_power_of_2(n));
+	assert!(is_nonzero_power_of_2(k));
 
 	// k | n is guaranteed
 	assert_eq!((n / k) * k, n);

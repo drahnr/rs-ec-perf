@@ -12,115 +12,35 @@ use super::*;
 use super::f2e16::*;
 
 
-
+include!("params.rs");
 include!("encode.rs");
 include!("decode.rs");
 
-pub const fn log2(mut x: usize) -> usize {
-	let mut o: usize = 0;
-	while x > 1 {
-		x >>= 1;
-		o += 1;
-	}
-	o
-}
-
-pub const fn is_nonzero_power_of_2(x: usize) -> bool {
-	x > 0_usize && x & (x - 1) == 0
-}
-
-use itertools::Itertools;
-
-pub const fn next_higher_power_of_2(k: usize) -> usize {
-	if is_nonzero_power_of_2(k) {
-		k
-	} else {
-		1 << (log2(k) + 1)
-	}
-}
-
-pub const fn next_lower_power_of_2(k: usize) -> usize {
-	if is_nonzero_power_of_2(k) {
-		k
-	} else {
-		1 << log2(k)
-	}
-}
-
-/// Params for the encoder / decoder
-/// derived from a target validator count.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CodeParams {
-	/// total number of message symbols to send
-	/// Invariant is a power of base 2
-	n: usize,
-	/// number of information containing chunks
-	/// Invariant is a power of base 2, `k < n`
-	k: usize,
-	/// Avoid copying unnecessary chunks.
-	real_n: usize,
-}
-
-impl CodeParams {
-	/// Create a new reed solomon erasure encoding wrapper
-	pub fn derive_from_third_plus_epsilon(real_n: usize) -> Result<Self> {
-		if real_n < 2 {
-			return Err(Error::ValidatorCountTooLow(real_n));
-		}
-		// we need to be able to reconstruct from 1/3 - eps
-		let k = std::cmp::max(real_n / 3, 1); // for the odd case of 2 validators
-		let k = next_lower_power_of_2(k);
-		let n = next_higher_power_of_2(real_n);
-		if n > FIELD_SIZE as usize {
-			return Err(Error::ValidatorCountTooLow(real_n));
-		}
-		Ok(Self { n, k, real_n })
-	}
-
-	// make a reed-solomon instance.
-	pub fn make_encoder(&self) -> ReedSolomon {
-		ReedSolomon::new(self.n, self.k, self.real_n)
-			.expect("this struct is not created with invalid shard number; qed")
-	}
-}
 
 pub fn encode(bytes: &[u8], real_n: usize) -> Result<Vec<WrappedShard>> {
-	let params = CodeParams::derive_from_third_plus_epsilon(real_n)?;
-
-	let rs = params.make_encoder();
+	let params = CodeParams::derive_from_third_plus_epsilon(real_n) ?;
+	let rs = params.check()
+	    .expect("this struct is not created with invalid shard number; qed");
 	rs.encode(bytes)
 }
 
 /// each shard contains one symbol of one run of erasure coding
 pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>, real_n: usize) -> Result<Vec<u8>> {
-	let params = CodeParams::derive_from_third_plus_epsilon(real_n)?;
-
-	let rs = params.make_encoder();
+	let params = CodeParams::derive_from_third_plus_epsilon(real_n) ?;
+	let rs = params.check()
+	    .expect("this struct is not created with invalid shard number; qed");
 	rs.reconstruct(received_shards)
 }
 
-pub struct ReedSolomon {
-	n: usize,
-	k: usize,
-	real_n: usize,
-}
 
-impl ReedSolomon {
+
+impl CheckedParams {
 	/// Returns the size per shard in bytes
 	pub fn shard_len(&self, payload_size: usize) -> usize {
 		let payload_symbols = (payload_size + 1) / 2;
 		let shard_symbols_ceil = (payload_symbols + self.k - 1) / self.k;
 		let shard_bytes = shard_symbols_ceil * 2;
 		shard_bytes
-	}
-
-	pub fn new(n: usize, k: usize, real_n: usize) -> Result<Self> {
-		// setup();
-		if !is_nonzero_power_of_2(n) && !is_nonzero_power_of_2(k) {
-			Err(Error::ParamterMustBePowerOf2 { n, k })
-		} else {
-			Ok(Self { real_n, n, k })
-		}
 	}
 
 	pub fn encode(&self, bytes: &[u8]) -> Result<Vec<WrappedShard>> {
@@ -786,7 +706,7 @@ mod test {
 
 	#[test]
 	fn shard_len_is_reasonable() {
-		let rs = CodeParams { n: 16, k: 4, real_n: 5 }.make_encoder();
+		let rs = CodeParams { n: 16, k: 4, real_n: 5 }.check().unwrap();
 
 		// since n must be a power of 2
 		// the chunk sizes becomes slightly larger

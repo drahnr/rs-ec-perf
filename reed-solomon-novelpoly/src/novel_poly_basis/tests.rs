@@ -5,11 +5,10 @@ use rand::distributions::Uniform;
 use rand::seq::index::IndexVec;
 use rand::rngs::SmallRng;
 use rand::thread_rng;
-use rand::SeedableRng;
+use rand::prelude::*;
 use reed_solomon_tester::*;
 
 
-use super::{Shard, OwnedShard};
 use super::*;
 
 /*
@@ -137,7 +136,7 @@ fn sub_encode_decode() -> Result<()> {
 }
 
 // for shards of length 1
-fn wrapped_shard_len1_as_gf_sym(w: &OwnedShard) -> Additive {
+fn wrapped_shard_len1_as_gf_sym(w: &WrappedShard) -> Additive {
     let val = AsRef::<[[u8; 2]]>::as_ref(w)[0];
     Additive(u16::from_be_bytes(val))
 }
@@ -229,15 +228,15 @@ fn roundtrip_for_large_messages() -> Result<()> {
     assert_recovery(payload, &reconstructed_payload, dropped_indices);
 
     // verify integrity with criterion tests
-    roundtrip_w_drop_closure::<_, _, _, SmallRng>(
+    roundtrip_w_drop_closure::<_, _, _, SmallRng, WrappedShard, _>(
         encode,
         reconstruct,
         payload,
         N_VALIDATORS,
-        deterministic_drop_shards::<OwnedShard, SmallRng>,
+        deterministic_drop_shards,
     )?;
 
-    roundtrip_w_drop_closure::<_, _, _, SmallRng>(
+    roundtrip_w_drop_closure::<_, _, _, SmallRng, WrappedShard, _>(
         encode,
         reconstruct,
         payload,
@@ -258,11 +257,11 @@ macro_rules! simplicissimus {
     ($name:ident: validators: $validator_count:literal, payload: $payload_size:literal; $matchmaker:pat => $assertive:expr) => {
         #[test]
         fn $name () {
-            let res = roundtrip_w_drop_closure::<'_,_,_,_,SmallRng,_>(
+            let res = roundtrip_w_drop_closure::<'_,_,_,_,SmallRng, WrappedShard, _>(
                 encode,
                 reconstruct,
                 &BYTES[0..$payload_size], $validator_count,
-                    deterministic_drop_shards::<Shard<'_>, SmallRng>);
+                    deterministic_drop_shards::<WrappedShard, SmallRng>);
             assert_matches::assert_matches!(res, $matchmaker => {
                 $assertive
             });

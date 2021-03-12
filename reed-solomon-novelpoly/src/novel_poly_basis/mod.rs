@@ -7,17 +7,20 @@
 
 #![allow(dead_code)]
 
+
+use itertools::Itertools;
+
 mod util;
+mod wrapped_shard;
+
+
+use self::wrapped_shard::*;
 
 use crate::errors::*;
 
 pub use self::util::*;
 
 use super::f2e16::*;
-
-
-pub type Shard<'a> = &'a [u8];
-pub type OwnedShard<'a> = Vec<u8>;
 
 //-----Used in decoding procedure-------
 //twisted factors used in FFT
@@ -351,6 +354,7 @@ pub fn eval_error_polynomial(erasure: &[bool], log_walsh2: &mut [Multiplier], n:
 // the first `k` instead of all `n` which
 // would include parity chunks.
 fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasure: &[bool], log_walsh2: &[Multiplier], n: usize) {
+
 	assert_eq!(codeword.len(), n);
 	assert!(n >= recover_up_to);
 	assert_eq!(erasure.len(), n);
@@ -432,7 +436,7 @@ impl CodeParams {
 	}
 }
 
-pub fn encode(bytes: &[u8], validator_count: usize) -> Result<Vec<OwnedShard>> {
+pub fn encode(bytes: &[u8], validator_count: usize) -> Result<Vec<WrappedShard>> {
 	let params = CodeParams::derive_from_validator_count(validator_count)?;
 
 	let rs = params.make_encoder();
@@ -440,7 +444,7 @@ pub fn encode(bytes: &[u8], validator_count: usize) -> Result<Vec<OwnedShard>> {
 }
 
 /// each shard contains one symbol of one run of erasure coding
-pub fn reconstruct<'a>(received_shards: &[Option<Shard<'a>>], validator_count: usize) -> Result<Vec<u8>> {
+pub fn reconstruct<'a>(received_shards: Vec<Option<WrappedShard>>, validator_count: usize) -> Result<Vec<u8>> {
 	let params = CodeParams::derive_from_validator_count(validator_count)?;
 
 	let rs = params.make_encoder();
@@ -471,7 +475,7 @@ impl ReedSolomon {
 		}
 	}
 
-	pub fn encode(&self, bytes: &[u8]) -> Result<Vec<OwnedShard>> {
+	pub fn encode(&self, bytes: &[u8]) -> Result<Vec<WrappedShard>> {
 		if bytes.is_empty() {
 			return Err(Error::PayloadSizeIsZero);
 		}
@@ -487,7 +491,7 @@ impl ReedSolomon {
 		let k2 = self.k * 2;
 		// prepare one wrapped shard per validator
 		let mut shards = vec![
-			OwnedShard::new({
+			WrappedShard::new({
 				let mut v = Vec::<u8>::with_capacity(shard_len);
 				unsafe { v.set_len(shard_len) }
 				v
@@ -511,12 +515,8 @@ impl ReedSolomon {
 	}
 
 	/// each shard contains one symbol of one run of erasure coding
-	pub fn reconstruct(&self, received_shards: Vec<Option<OwnedShard>>) -> Result<Vec<u8>> {
+	pub fn reconstruct(&self, received_shards: Vec<Option<WrappedShard>>) -> Result<Vec<u8>> {
 		let gap = self.n.saturating_sub(received_shards.len());
-		let received_shards =
-			received_shards.into_iter().take(self.n).chain(std::iter::repeat(None).take(gap)).collect::<Vec<_>>();
-
-		assert_eq!(received_shards.len(), self.n);
 
 		// obtain a sample of a shard length and assume that is the truth
 		// XXX make sure all shards have equal length
@@ -530,8 +530,17 @@ impl ReedSolomon {
 			})
 			.unwrap();
 
-		// TODO check shard length is what we'd expect
+		let received_shards =
+			received_shards
+				.into_iter()
+				.take(self.n)
+				.chain(std::iter::repeat(None)
+				.take(gap))
+				.collect::<Vec<_>>();
 
+		assert_eq!(received_shards.len(), self.n);
+
+		// must be collected after expanding `received_shards` to the anticipated size
 		let mut existential_count = 0_usize;
 		let erasures = received_shards
 			.iter()
@@ -539,9 +548,11 @@ impl ReedSolomon {
 			.inspect(|erased| existential_count += !*erased as usize)
 			.collect::<Vec<bool>>();
 
+
 		if existential_count < self.k {
 			return Err(Error::NeedMoreShards { have: existential_count, min: self.k, all: self.n });
 		}
+
 
 		// Evaluate error locator polynomial only once
 		let mut error_poly_in_log = [Multiplier(0); FIELD_SIZE];
@@ -656,9 +667,6 @@ pub fn reconstruct_sub(
 
 	// filled up the remaining spots with 0s
 	assert_eq!(codeword.len(), n);
-
-	// the first k would suffice for the original k message codewords
-	let recover_up_to = k;
 
 	//---------Erasure decoding----------------
 

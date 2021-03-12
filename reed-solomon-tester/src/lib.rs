@@ -67,14 +67,14 @@ pub fn deterministic_drop_shards_clone<T: Sized + Clone>(
     n: usize,
     k: usize,
 ) -> (Vec<Option<T>>, IndexVec) {
-    let mut rng = SmallRng::from_seed(crate::SMALL_RNG_SEED);
+    let mut rng = SmallRng::from_seed(SMALL_RNG_SEED);
     let mut codewords = codewords.into_iter().map(|x| Some(x.clone())).collect::<Vec<Option<T>>>();
     let idx = deterministic_drop_shards::<T, SmallRng>(&mut codewords, n, k, &mut rng);
     assert!(idx.len() <= n - k);
     (codewords, idx)
 }
 
-pub fn drop_random_max<'s>(shards: &mut [Option<Shard<'s>>], n: usize, k: usize, rng: &mut impl rand::Rng) -> IndexVec {
+pub fn drop_random_max<T: Sized + Clone>(shards: &mut [Option<T>], n: usize, k: usize, rng: &mut impl rand::Rng) -> IndexVec {
 	let l = shards.len();
 	let already_dropped = n.saturating_sub(l);
 	let iv = rand::seq::index::sample(rng, l, n - k - already_dropped);
@@ -87,43 +87,45 @@ pub fn drop_random_max<'s>(shards: &mut [Option<Shard<'s>>], n: usize, k: usize,
 	iv
 }
 
-pub fn roundtrip<'s, Enc, Recon, E>(encode: Enc, reconstruct: Recon, payload: &'s [u8], validator_count: usize) -> result::Result<(), E>
+pub fn roundtrip<'s, Enc, Recon, S, E>(encode: Enc, reconstruct: Recon, payload: &'s [u8], target_shard_count: usize) -> result::Result<(), E>
 where
-	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<Shard<'s>>, E>,
-	Recon: Fn(Vec<Option<Shard<'s>>>, usize) -> result::Result<Vec<u8>, E>,
+	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<S>, E>,
+	Recon: Fn(Vec<Option<S>>, usize) -> result::Result<Vec<u8>, E>,
     E: error::Error + Send + Sync + 'static,
+	S: AsRef<[u8]> + AsRef<[[u8;2]]> + Sized + Clone,
 {
 	let v =
-		roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, E>(encode, reconstruct, payload, validator_count, drop_random_max)?;
+		roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E>(encode, reconstruct, payload, target_shard_count, drop_random_max)?;
 	Ok(v)
 }
 
-pub fn roundtrip_w_drop_closure<'s, Enc, Recon, DropFun, RandGen, E>(
+pub fn roundtrip_w_drop_closure<'s, Enc, Recon, DropFun, RandGen, S, E>(
 	encode: Enc,
 	reconstruct: Recon,
 	payload: &'s [u8],
-	validator_count: usize,
+	target_shard_count: usize,
 	mut drop_rand: DropFun,
 ) -> result::Result<(), E>
 where
     E: error::Error + Send + Sync + 'static,
-	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<Shard>, E>,
-	Recon: Fn(Vec<Option<Shard<'s>>>, usize) -> result::Result<Vec<u8>, E>,
-	DropFun: for<'z> FnMut(&'z mut [Option<Shard<'s>>], usize, usize, &mut RandGen) -> IndexVec,
+	S: AsRef<[u8]> + AsRef<[[u8;2]]> + Sized + Clone,
+	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<S>, E>,
+	Recon: Fn(Vec<Option<S>>, usize) -> result::Result<Vec<u8>, E>,
+	DropFun: for<'z> FnMut(&'z mut [Option<S>], usize, usize, &mut RandGen) -> IndexVec,
 	RandGen: rand::Rng + rand::SeedableRng<Seed = [u8; 32]>,
 {
 	let mut rng = <RandGen as rand::SeedableRng>::from_seed(SMALL_RNG_SEED);
 
 	// Construct the shards
-	let shards = encode(payload, validator_count)?;
+	let shards = encode(payload, target_shard_count)?;
 
 	// Make a copy and transform it into option shards arrangement
 	// for feeding into reconstruct_shards
-	let mut received_shards = shards.into_iter().map(Some).collect::<Vec<Option<Shard<'s>>>>();
+	let mut received_shards = shards.into_iter().map(Some).collect::<Vec<Option<S>>>();
 
-	let dropped_indices = drop_rand(received_shards.as_mut_slice(), validator_count, validator_count / 3, &mut rng);
+	let dropped_indices = drop_rand(received_shards.as_mut_slice(), target_shard_count, target_shard_count / 3, &mut rng);
 
-	let recovered_payload = reconstruct(received_shards, validator_count)?;
+	let recovered_payload = reconstruct(received_shards, target_shard_count)?;
 
 	assert_recovery(&payload[..], &recovered_payload[..], dropped_indices);
 	Ok(())

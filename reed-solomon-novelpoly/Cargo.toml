@@ -20,7 +20,7 @@ reed-solomon-erasure = { version = "4.0", features = ["simd-accel"], optional = 
 
 thiserror = "1.0.23"
 derive_more = { version = "0.99.0", default-features = false, features = ["add_assign", "add"] }
-
+itertools = "0.10"
 
 [dev-dependencies]
 reed-solomon-tester = { path = "../reed-solomon-tester" }

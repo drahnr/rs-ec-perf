@@ -1,8 +1,5 @@
 use honggfuzz::fuzz;
 
-use rs::*;
-use rstester::*;
-
 use arbitrary::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -33,7 +30,7 @@ struct Feed<'a> {
 }
 
 fn main() {
-	novel_poly_basis::setup();
+	novelpoly::setup();
 
 	// You have full control over the loop but
 	// you're supposed to call `fuzz` ad vitam aeternam
@@ -45,7 +42,7 @@ fn main() {
 		// Here, this slice will contain a "random" quantity of "random" data.
 		fuzz!(|feed: Feed| {
 			let _ =
-				roundtrip(novel_poly_basis::encode, novel_poly_basis::reconstruct, feed.data, *feed.validator_count);
+			rstester::roundtrip(novelpoly::encode, novelpoly::reconstruct, feed.data, *feed.validator_count);
 		});
 	}
 }

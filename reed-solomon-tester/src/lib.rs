@@ -11,6 +11,11 @@ pub static SMALL_RNG_SEED: [u8; 32] = [
 /// Demo test data, generated via `build.rs`.
 pub const BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rand_data.bin"));
 
+/// Shared target number of shards for simple, quirk turnaround tests:
+pub const N_SHARDS: usize = 123;
+/// Shared target number of payload size for simple, quirk turnaround tests:
+pub const TEST_DATA_CHUNK_SIZE: usize = 1337;
+
 /// Alias type for API clarity.
 pub type Shard<'a> = &'a [u8];
 

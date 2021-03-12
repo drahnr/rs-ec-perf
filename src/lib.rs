@@ -4,22 +4,34 @@ pub use reed_solomon_novelpoly as novelpoly;
 #[cfg(feature = "naive")]
 pub mod naive;
 
-pub const N_SHARDS: usize = 123;
-pub const TEST_DATA_CHUNK_SIZE: usize = 1337;
-pub use reed_solomon_tester::BYTES;
+pub use reed_solomon_tester::{BYTES, N_SHARDS, TEST_DATA_CHUNK_SIZE};
 
 #[cfg(test)]
 mod test {
 
-	#[cfg(feature = "naive")]
-	#[test]
-	fn naive_roundtrip() -> Result<()> {
-		roundtrip(naive::encode, naive::reconstruct, &BYTES[..TEST_DATA_CHUNK_SIZE], N_SHARDS)
-	}
+	use super::*;
 
 	#[cfg(feature = "novelpoly")]
 	#[test]
-	fn novelpoly_roundtrip() -> Result<()> {
-		roundtrip(novelpoly::encode, novelpoly::reconstruct, &BYTES[..TEST_DATA_CHUNK_SIZE], N_SHARDS)
+	fn novelpoly_roundtrip() -> std::result::Result<(), novelpoly::Error> {
+		reed_solomon_tester::roundtrip(novelpoly::encode, novelpoly::reconstruct, &BYTES[..TEST_DATA_CHUNK_SIZE], N_SHARDS)
+	}
+
+
+	#[cfg(feature = "novelpoly-with-alt-cxx-impl")]
+	fn novelpoly_cxx_roundtrip() -> std::result::Result<(), novelpoly::Error> {
+		reed_solomon_tester::roundtrip(
+			novelpoly::cxx::encode,
+			novelpoly::cxx::reconstruct,
+			&BYTES[..TEST_DATA_CHUNK_SIZE],
+			N_SHARDS,
+		)?;
+	}
+
+
+	#[cfg(feature = "naive")]
+	#[test]
+	fn naive_roundtrip() -> std::result::Result<(), naive::Error> {
+		reed_solomon_tester::roundtrip(naive::encode, naive::reconstruct, &BYTES[..TEST_DATA_CHUNK_SIZE], N_SHARDS)
 	}
 }

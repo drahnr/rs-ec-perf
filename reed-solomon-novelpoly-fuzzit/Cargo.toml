@@ -9,4 +9,4 @@ publish = false
 honggfuzz = "=0.5.54"
 arbitrary = { version = "1", features = ["derive"] }
 rstester = { path = "../reed-solomon-tester", package = "reed-solomon-tester" }
-rs = { path = "../reed-solomon-novelpoly", package = "reed-solomon-novelpoly" }
+novelpoly = { path = "../reed-solomon-novelpoly", package = "reed-solomon-novelpoly" }

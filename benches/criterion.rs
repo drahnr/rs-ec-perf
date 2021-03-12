@@ -19,9 +19,9 @@ macro_rules! instanciate_upper_bound_test {
 
 			use crate::drop_random_max;
 			use crate::$mp::{encode, reconstruct};
-			use reed_solomon_tester::{BYTES, SMALL_RNG_SEED};
 			use criterion::{black_box, Criterion};
 			use rand::{rngs::SmallRng, SeedableRng};
+			use reed_solomon_tester::{BYTES, SMALL_RNG_SEED};
 
 			#[test]
 			fn criterion_roundtrip_integrity() {
@@ -65,9 +65,9 @@ pub mod tests {
 pub mod parameterized {
 	use criterion::{black_box, BenchmarkId, Criterion};
 
-	use std::ops::Range;
-	use reed_solomon_tester::{BYTES, SMALL_RNG_SEED, drop_random_max};
 	use rand::{rngs::SmallRng, SeedableRng};
+	use reed_solomon_tester::{drop_random_max, BYTES, SMALL_RNG_SEED};
+	use std::ops::Range;
 
 	const STEPS_VALIDATORS: usize = 4;
 	const STEPS_PAYLOAD: usize = 10;

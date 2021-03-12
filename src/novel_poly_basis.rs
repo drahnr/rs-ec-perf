@@ -13,6 +13,9 @@ use super::f2e16::*;
 
 
 
+include!("encode.rs");
+include!("decode.rs");
+
 pub const fn log2(mut x: usize) -> usize {
 	let mut o: usize = 0;
 	while x > 1 {
@@ -26,25 +29,21 @@ pub const fn is_nonzero_power_of_2(x: usize) -> bool {
 	x > 0_usize && x & (x - 1) == 0
 }
 
-include!("encode.rs");
-include!("decode.rs");
-
-
 use itertools::Itertools;
 
 pub const fn next_higher_power_of_2(k: usize) -> usize {
-	if !is_nonzero_power_of_2(k) {
-		1 << (log2(k) + 1)
-	} else {
+	if is_nonzero_power_of_2(k) {
 		k
+	} else {
+		1 << (log2(k) + 1)
 	}
 }
 
 pub const fn next_lower_power_of_2(k: usize) -> usize {
-	if !is_nonzero_power_of_2(k) {
-		1 << log2(k)
-	} else {
+	if is_nonzero_power_of_2(k) {
 		k
+	} else {
+		1 << log2(k)
 	}
 }
 

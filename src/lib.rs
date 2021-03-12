@@ -14,9 +14,13 @@ mod test {
 	#[cfg(feature = "novelpoly")]
 	#[test]
 	fn novelpoly_roundtrip() -> std::result::Result<(), novelpoly::Error> {
-		reed_solomon_tester::roundtrip(novelpoly::encode, novelpoly::reconstruct, &BYTES[..TEST_DATA_CHUNK_SIZE], N_SHARDS)
+		reed_solomon_tester::roundtrip(
+			novelpoly::encode,
+			novelpoly::reconstruct,
+			&BYTES[..TEST_DATA_CHUNK_SIZE],
+			N_SHARDS,
+		)
 	}
-
 
 	#[cfg(feature = "novelpoly-with-alt-cxx-impl")]
 	fn novelpoly_cxx_roundtrip() -> std::result::Result<(), novelpoly::Error> {
@@ -27,7 +31,6 @@ mod test {
 			N_SHARDS,
 		)?;
 	}
-
 
 	#[cfg(feature = "naive")]
 	#[test]

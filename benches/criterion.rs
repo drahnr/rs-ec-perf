@@ -18,10 +18,10 @@ macro_rules! instanciate_upper_bound_test {
 			const PAYLOAD_SIZE_CUTOFF: usize = 10_000_000;
 
 			use crate::drop_random_max;
-			use reed_solomon_performance::$mp::{encode, reconstruct};
 			use criterion::{black_box, Criterion};
 			use rand::{rngs::SmallRng, SeedableRng};
-			use reed_solomon_tester::{BYTES, SMALL_RNG_SEED, roundtrip};
+			use reed_solomon_performance::$mp::{encode, reconstruct};
+			use reed_solomon_tester::{roundtrip, BYTES, SMALL_RNG_SEED};
 
 			#[test]
 			fn criterion_roundtrip_integrity() {
@@ -128,7 +128,6 @@ pub mod parameterized {
 		validator_count: usize,
 		payload_size: usize,
 	) {
-
 		#[cfg(feature = "novelpoly")]
 		{
 			group.bench_with_input(
@@ -137,7 +136,10 @@ pub mod parameterized {
 				|b, &payload_size| {
 					{
 						b.iter(|| {
-							let _ = reed_solomon_performance::novelpoly::encode(black_box(&BYTES[..payload_size]), black_box(validator_count));
+							let _ = reed_solomon_performance::novelpoly::encode(
+								black_box(&BYTES[..payload_size]),
+								black_box(validator_count),
+							);
 						})
 					}
 				},
@@ -150,7 +152,10 @@ pub mod parameterized {
 				&payload_size,
 				|b, &payload_size| {
 					b.iter(|| {
-						let _ = reed_solomon_performance::naive::encode(black_box(&BYTES[..payload_size]), black_box(validator_count));
+						let _ = reed_solomon_performance::naive::encode(
+							black_box(&BYTES[..payload_size]),
+							black_box(validator_count),
+						);
 					})
 				},
 			);
@@ -169,13 +174,17 @@ pub mod parameterized {
 				BenchmarkId::new("novel-poly-reconstruct", param.to_string()),
 				&payload_size,
 				|b, &payload_size| {
-					let encoded = reed_solomon_performance::novelpoly::encode(&BYTES[..payload_size], validator_count).unwrap();
+					let encoded =
+						reed_solomon_performance::novelpoly::encode(&BYTES[..payload_size], validator_count).unwrap();
 					let shards = encoded.clone().into_iter().map(Some).collect::<Vec<_>>();
 
 					b.iter(|| {
 						let mut shards2: Vec<Option<_>> = shards.clone();
 						drop_random_max(&mut shards2[..], validator_count, validator_count / 3, rng);
-						let _ = reed_solomon_performance::novelpoly::reconstruct(black_box(shards2), black_box(validator_count));
+						let _ = reed_solomon_performance::novelpoly::reconstruct(
+							black_box(shards2),
+							black_box(validator_count),
+						);
 					})
 				},
 			);
@@ -187,13 +196,17 @@ pub mod parameterized {
 				BenchmarkId::new("naive-reconstruct", param.to_string()),
 				&payload_size,
 				|b, &payload_size| {
-					let encoded = reed_solomon_performance::naive::encode(&BYTES[..payload_size], validator_count).unwrap();
+					let encoded =
+						reed_solomon_performance::naive::encode(&BYTES[..payload_size], validator_count).unwrap();
 					let shards = encoded.clone().into_iter().map(Some).collect::<Vec<_>>();
 
 					b.iter(|| {
 						let mut shards2: Vec<Option<_>> = shards.clone();
 						drop_random_max(&mut shards2[..], validator_count, validator_count / 3, rng);
-						let _ = reed_solomon_performance::naive::reconstruct(black_box(shards2), black_box(validator_count));
+						let _ = reed_solomon_performance::naive::reconstruct(
+							black_box(shards2),
+							black_box(validator_count),
+						);
 					})
 				},
 			);

@@ -63,13 +63,13 @@ pub fn drop_random_max(shards: &mut [Option<WrappedShard>], n: usize, k: usize, 
 	iv
 }
 
-pub fn roundtrip<E, R>(encode: E, reconstruct: R, payload: &[u8], validator_count: usize) -> Result<()>
+pub fn roundtrip<E, R>(encode: E, reconstruct: R, payload: &[u8], real_n: usize) -> Result<()>
 where
 	E: for<'r> Fn(&'r [u8], usize) -> Result<Vec<WrappedShard>>,
 	R: Fn(Vec<Option<WrappedShard>>, usize) -> Result<Vec<u8>>,
 {
 	let v =
-		roundtrip_w_drop_closure::<E, R, _, SmallRng>(encode, reconstruct, payload, validator_count, drop_random_max)?;
+		roundtrip_w_drop_closure::<E, R, _, SmallRng>(encode, reconstruct, payload, real_n, drop_random_max)?;
 	Ok(v)
 }
 
@@ -77,7 +77,7 @@ pub fn roundtrip_w_drop_closure<E, R, F, G>(
 	encode: E,
 	reconstruct: R,
 	payload: &[u8],
-	validator_count: usize,
+	real_n: usize,
 	mut drop_rand: F,
 ) -> Result<()>
 where
@@ -89,15 +89,15 @@ where
 	let mut rng = <G as rand::SeedableRng>::from_seed(SMALL_RNG_SEED);
 
 	// Construct the shards
-	let shards = encode(payload, validator_count)?;
+	let shards = encode(payload, real_n)?;
 
 	// Make a copy and transform it into option shards arrangement
 	// for feeding into reconstruct_shards
 	let mut received_shards = shards.into_iter().map(Some).collect::<Vec<Option<WrappedShard>>>();
 
-	let dropped_indices = drop_rand(received_shards.as_mut_slice(), validator_count, validator_count / 3, &mut rng);
+	let dropped_indices = drop_rand(received_shards.as_mut_slice(), real_n, real_n / 3, &mut rng);
 
-	let recovered_payload = reconstruct(received_shards, validator_count)?;
+	let recovered_payload = reconstruct(received_shards, real_n)?;
 
 	assert_recovery(&payload[..], &recovered_payload[..], dropped_indices);
 	Ok(())

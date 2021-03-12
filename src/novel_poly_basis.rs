@@ -22,7 +22,7 @@ pub const fn log2(mut x: usize) -> usize {
 	o
 }
 
-pub const fn is_power_of_2(x: usize) -> bool {
+pub const fn is_nonzero_power_of_2(x: usize) -> bool {
 	x > 0_usize && x & (x - 1) == 0
 }
 
@@ -33,7 +33,7 @@ include!("decode.rs");
 use itertools::Itertools;
 
 pub const fn next_higher_power_of_2(k: usize) -> usize {
-	if !is_power_of_2(k) {
+	if !is_nonzero_power_of_2(k) {
 		1 << (log2(k) + 1)
 	} else {
 		k
@@ -41,7 +41,7 @@ pub const fn next_higher_power_of_2(k: usize) -> usize {
 }
 
 pub const fn next_lower_power_of_2(k: usize) -> usize {
-	if !is_power_of_2(k) {
+	if !is_nonzero_power_of_2(k) {
 		1 << log2(k)
 	} else {
 		k
@@ -59,42 +59,42 @@ pub struct CodeParams {
 	/// Invariant is a power of base 2, `k < n`
 	k: usize,
 	/// Avoid copying unnecessary chunks.
-	validator_count: usize,
+	real_n: usize,
 }
 
 impl CodeParams {
 	/// Create a new reed solomon erasure encoding wrapper
-	pub fn derive_from_validator_count(validator_count: usize) -> Result<Self> {
-		if validator_count < 2 {
-			return Err(Error::ValidatorCountTooLow(validator_count));
+	pub fn derive_from_third_plus_epsilon(real_n: usize) -> Result<Self> {
+		if real_n < 2 {
+			return Err(Error::ValidatorCountTooLow(real_n));
 		}
 		// we need to be able to reconstruct from 1/3 - eps
-		let k = std::cmp::max(validator_count / 3, 1); // for the odd case of 2 validators
+		let k = std::cmp::max(real_n / 3, 1); // for the odd case of 2 validators
 		let k = next_lower_power_of_2(k);
-		let n = next_higher_power_of_2(validator_count);
+		let n = next_higher_power_of_2(real_n);
 		if n > FIELD_SIZE as usize {
-			return Err(Error::ValidatorCountTooLow(validator_count));
+			return Err(Error::ValidatorCountTooLow(real_n));
 		}
-		Ok(Self { n, k, validator_count })
+		Ok(Self { n, k, real_n })
 	}
 
 	// make a reed-solomon instance.
 	pub fn make_encoder(&self) -> ReedSolomon {
-		ReedSolomon::new(self.n, self.k, self.validator_count)
+		ReedSolomon::new(self.n, self.k, self.real_n)
 			.expect("this struct is not created with invalid shard number; qed")
 	}
 }
 
-pub fn encode(bytes: &[u8], validator_count: usize) -> Result<Vec<WrappedShard>> {
-	let params = CodeParams::derive_from_validator_count(validator_count)?;
+pub fn encode(bytes: &[u8], real_n: usize) -> Result<Vec<WrappedShard>> {
+	let params = CodeParams::derive_from_third_plus_epsilon(real_n)?;
 
 	let rs = params.make_encoder();
 	rs.encode(bytes)
 }
 
 /// each shard contains one symbol of one run of erasure coding
-pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>, validator_count: usize) -> Result<Vec<u8>> {
-	let params = CodeParams::derive_from_validator_count(validator_count)?;
+pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>, real_n: usize) -> Result<Vec<u8>> {
+	let params = CodeParams::derive_from_third_plus_epsilon(real_n)?;
 
 	let rs = params.make_encoder();
 	rs.reconstruct(received_shards)
@@ -103,7 +103,7 @@ pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>, validator_count: 
 pub struct ReedSolomon {
 	n: usize,
 	k: usize,
-	validator_count: usize,
+	real_n: usize,
 }
 
 impl ReedSolomon {
@@ -115,12 +115,12 @@ impl ReedSolomon {
 		shard_bytes
 	}
 
-	pub fn new(n: usize, k: usize, validator_count: usize) -> Result<Self> {
+	pub fn new(n: usize, k: usize, real_n: usize) -> Result<Self> {
 		// setup();
-		if !is_power_of_2(n) && !is_power_of_2(k) {
+		if !is_nonzero_power_of_2(n) && !is_nonzero_power_of_2(k) {
 			Err(Error::ParamterMustBePowerOf2 { n, k })
 		} else {
-			Ok(Self { validator_count, n, k })
+			Ok(Self { real_n, n, k })
 		}
 	}
 
@@ -136,7 +136,7 @@ impl ReedSolomon {
 		assert!(shard_len > 0);
 		// collect all sub encoding runs
 
-		let validator_count = self.validator_count;
+		let real_n = self.real_n;
 		let k2 = self.k * 2;
 		// prepare one wrapped shard per validator
 		let mut shards = vec![
@@ -145,7 +145,7 @@ impl ReedSolomon {
 				unsafe { v.set_len(shard_len) }
 				v
 			});
-			validator_count
+			real_n
 		];
 
 		for (chunk_idx, i) in (0..bytes.len()).into_iter().step_by(k2).enumerate() {
@@ -155,7 +155,7 @@ impl ReedSolomon {
 			assert!(!data_piece.is_empty());
 			assert!(data_piece.len() <= k2);
 			let encoding_run = encode_sub(data_piece, self.n, self.k)?;
-			for val_idx in 0..validator_count {
+			for val_idx in 0..real_n {
 				AsMut::<[[u8; 2]]>::as_mut(&mut shards[val_idx])[chunk_idx] = encoding_run[val_idx].0.to_be_bytes();
 			}
 		}
@@ -226,14 +226,14 @@ impl ReedSolomon {
 
 /// Bytes shall only contain payload data
 pub fn encode_sub(bytes: &[u8], n: usize, k: usize) -> Result<Vec<Additive>> {
-	assert!(is_power_of_2(n), "Algorithm only works for 2^i sizes for N");
-	assert!(is_power_of_2(k), "Algorithm only works for 2^i sizes for K");
+	assert!(is_nonzero_power_of_2(n), "Algorithm only works for 2^i sizes for N");
+	assert!(is_nonzero_power_of_2(k), "Algorithm only works for 2^i sizes for K");
 	assert!(bytes.len() <= k << 1);
 	assert!(k <= n / 2);
 
 	// must be power of 2
 	let dl = bytes.len();
-	let l = if is_power_of_2(dl) {
+	let l = if is_nonzero_power_of_2(dl) {
 		dl
 	} else {
 		let l = log2(dl);
@@ -241,7 +241,7 @@ pub fn encode_sub(bytes: &[u8], n: usize, k: usize) -> Result<Vec<Additive>> {
 		let l = if l >= dl { l } else { l << 1 };
 		l
 	};
-	assert!(is_power_of_2(l));
+	assert!(is_nonzero_power_of_2(l));
 	assert!(l >= dl);
 
 	// pad the incoming bytes with trailing 0s
@@ -276,8 +276,8 @@ pub fn reconstruct_sub(
 	k: usize,
 	error_poly: &[Multiplier; FIELD_SIZE],
 ) -> Result<Vec<u8>> {
-	assert!(is_power_of_2(n), "Algorithm only works for 2^i sizes for N");
-	assert!(is_power_of_2(k), "Algorithm only works for 2^i sizes for K");
+	assert!(is_nonzero_power_of_2(n), "Algorithm only works for 2^i sizes for N");
+	assert!(is_nonzero_power_of_2(k), "Algorithm only works for 2^i sizes for K");
 	assert_eq!(codewords.len(), n);
 	assert!(k <= n / 2);
 
@@ -372,26 +372,26 @@ mod test {
 
 	#[test]
 	fn base_2_powers_of_2() {
-		assert!(!is_power_of_2(0));
+		assert!(!is_nonzero_power_of_2(0));
 		for i in 0..20 {
-			assert!(is_power_of_2(1 << i));
+			assert!(is_nonzero_power_of_2(1 << i));
 		}
 		for i in 0..20 {
-			assert!(!is_power_of_2(7 << i));
+			assert!(!is_nonzero_power_of_2(7 << i));
 		}
 		let mut f = 3;
 		for _i in 0..20 {
 			f *= 7;
-			assert!(!is_power_of_2(f));
+			assert!(!is_nonzero_power_of_2(f));
 		}
-		assert_eq!(is_power_of_2(3), false);
+		assert_eq!(is_nonzero_power_of_2(3), false);
 	}
 
 	#[test]
 	fn base_2_upper_bound() {
 		for i in 1_usize..=1024 {
 			let upper = next_higher_power_of_2(i);
-			if is_power_of_2(i) {
+			if is_nonzero_power_of_2(i) {
 				assert_eq!(upper, i);
 			} else {
 				assert!(upper > i);
@@ -402,11 +402,11 @@ mod test {
 	#[test]
 	fn k_n_construction() {
 		// skip the two, it's a special case
-		for validator_count in 3_usize..=8200 {
-			let CodeParams { n, k, .. } = CodeParams::derive_from_validator_count(validator_count).unwrap();
-			assert!(validator_count <= n, "vc={} <= n={} violated", validator_count, n);
-			assert!(validator_count / 3 >= k, "vc={} / 3 >= k={} violated", validator_count, k);
-			assert!(validator_count >= k * 3, "vc={} <= k={} *3  violated", validator_count, k);
+		for real_n in 3_usize..=8200 {
+			let CodeParams { n, k, .. } = CodeParams::derive_from_third_plus_epsilon(real_n).unwrap();
+			assert!(real_n <= n, "vc={} <= n={} violated", real_n, n);
+			assert!(real_n / 3 >= k, "vc={} / 3 >= k={} violated", real_n, k);
+			assert!(real_n >= k * 3, "vc={} <= k={} *3  violated", real_n, k);
 		}
 	}
 
@@ -515,7 +515,7 @@ mod test {
 		const K2: usize = K * 2;
 
 		// assure the derived sizes match
-		let rs = CodeParams::derive_from_validator_count(N_VALIDATORS).unwrap();
+		let rs = CodeParams::derive_from_third_plus_epsilon(N_VALIDATORS).unwrap();
 		assert_eq!(rs.n, N);
 		assert_eq!(rs.k, K);
 
@@ -566,7 +566,7 @@ mod test {
 		const K2: usize = K * 2;
 
 		// assure the derived sizes match
-		let rs = CodeParams::derive_from_validator_count(N_VALIDATORS).unwrap();
+		let rs = CodeParams::derive_from_third_plus_epsilon(N_VALIDATORS).unwrap();
 		assert_eq!(rs.n, N);
 		assert_eq!(rs.k, K);
 
@@ -611,19 +611,19 @@ mod test {
 	}
 
 	macro_rules! simplicissimus {
-		($name:ident: validators: $validator_count:literal, payload: $payload_size:literal; $matchmaker:pat) => {
-			simplicissimus!($name: validators: $validator_count, payload: $payload_size; $matchmaker => {});
+		($name:ident: validators: $real_n:literal, payload: $payload_size:literal; $matchmaker:pat) => {
+			simplicissimus!($name: validators: $real_n, payload: $payload_size; $matchmaker => {});
 		};
-		($name:ident: validators: $validator_count:literal, payload: $payload_size:literal) => {
-			simplicissimus!($name: validators: $validator_count, payload: $payload_size; Ok(x) => { let _ = x; });
+		($name:ident: validators: $real_n:literal, payload: $payload_size:literal) => {
+			simplicissimus!($name: validators: $real_n, payload: $payload_size; Ok(x) => { let _ = x; });
 		};
-		($name:ident: validators: $validator_count:literal, payload: $payload_size:literal; $matchmaker:pat => $assertive:expr) => {
+		($name:ident: validators: $real_n:literal, payload: $payload_size:literal; $matchmaker:pat => $assertive:expr) => {
 			#[test]
 			fn $name () {
 				let res = roundtrip_w_drop_closure::<_,_,_,SmallRng>(
 					encode,
 					reconstruct,
-					&BYTES[0..$payload_size], $validator_count,
+					&BYTES[0..$payload_size], $real_n,
 					 deterministic_drop_shards::<WrappedShard, SmallRng>);
 				assert_matches::assert_matches!(res, $matchmaker => {
 					$assertive
@@ -769,25 +769,25 @@ mod test {
 
 	#[test]
 	fn test_code_params() {
-		assert_matches!(CodeParams::derive_from_validator_count(0), Err(_));
+		assert_matches!(CodeParams::derive_from_third_plus_epsilon(0), Err(_));
 
-		assert_matches!(CodeParams::derive_from_validator_count(1), Err(_));
+		assert_matches!(CodeParams::derive_from_third_plus_epsilon(1), Err(_));
 
-		assert_eq!(CodeParams::derive_from_validator_count(2), Ok(CodeParams { n: 2, k: 1, validator_count: 2 }));
+		assert_eq!(CodeParams::derive_from_third_plus_epsilon(2), Ok(CodeParams { n: 2, k: 1, real_n: 2 }));
 
-		assert_eq!(CodeParams::derive_from_validator_count(3), Ok(CodeParams { n: 4, k: 1, validator_count: 3 }));
+		assert_eq!(CodeParams::derive_from_third_plus_epsilon(3), Ok(CodeParams { n: 4, k: 1, real_n: 3 }));
 
-		assert_eq!(CodeParams::derive_from_validator_count(4), Ok(CodeParams { n: 4, k: 1, validator_count: 4 }));
+		assert_eq!(CodeParams::derive_from_third_plus_epsilon(4), Ok(CodeParams { n: 4, k: 1, real_n: 4 }));
 
 		assert_eq!(
-			CodeParams::derive_from_validator_count(100),
-			Ok(CodeParams { n: 128, k: 32, validator_count: 100 })
+			CodeParams::derive_from_third_plus_epsilon(100),
+			Ok(CodeParams { n: 128, k: 32, real_n: 100 })
 		);
 	}
 
 	#[test]
 	fn shard_len_is_reasonable() {
-		let rs = CodeParams { n: 16, k: 4, validator_count: 5 }.make_encoder();
+		let rs = CodeParams { n: 16, k: 4, real_n: 5 }.make_encoder();
 
 		// since n must be a power of 2
 		// the chunk sizes becomes slightly larger

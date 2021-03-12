@@ -368,7 +368,6 @@ fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasure: &[bool]
 	// formal derivative
 
 	// We should change nothing when multiplying by b from B.
-	#[cfg(test)]
 	for i in (0..n).into_iter().step_by(2) {
 		let b = Multiplier(ONEMASK) - unsafe { B[i >> 1] };
 		#[cfg(test)]
@@ -382,7 +381,6 @@ fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasure: &[bool]
 	formal_derivative(codeword, n);
 
 	// Again changes nothing by multiplying by b although b differs here.
-	#[cfg(test)]
 	for i in (0..n).into_iter().step_by(2) {
 		#[cfg(test)]
 		let x: [_; 2] = [codeword[i], codeword[i + 1]];

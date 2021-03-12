@@ -7,12 +7,10 @@
 
 #![allow(dead_code)]
 
-
 use itertools::Itertools;
 
 mod util;
 mod wrapped_shard;
-
 
 use self::wrapped_shard::*;
 
@@ -28,8 +26,6 @@ static mut SKEW_FACTOR: [Elt; ONEMASK as usize] = [0_u16; ONEMASK as usize];
 
 //factors used in formal derivative
 static mut B: [Multiplier; FIELD_SIZE >> 1] = [Multiplier(0_u16); FIELD_SIZE >> 1];
-
-
 
 //formal derivative of polynomial in the new basis
 pub fn formal_derivative(cos: &mut [Additive], size: usize) {
@@ -354,7 +350,6 @@ pub fn eval_error_polynomial(erasure: &[bool], log_walsh2: &mut [Multiplier], n:
 // the first `k` instead of all `n` which
 // would include parity chunks.
 fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasure: &[bool], log_walsh2: &[Multiplier], n: usize) {
-
 	assert_eq!(codeword.len(), n);
 	assert!(n >= recover_up_to);
 	assert_eq!(erasure.len(), n);
@@ -397,7 +392,6 @@ fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasure: &[bool]
 		codeword[i] = if erasure[i] { codeword[i].mul(log_walsh2[i]) } else { Additive(0) };
 	}
 }
-
 
 /// Params for the encoder / decoder
 /// derived from a target validator count.
@@ -531,12 +525,7 @@ impl ReedSolomon {
 			.unwrap();
 
 		let received_shards =
-			received_shards
-				.into_iter()
-				.take(self.n)
-				.chain(std::iter::repeat(None)
-				.take(gap))
-				.collect::<Vec<_>>();
+			received_shards.into_iter().take(self.n).chain(std::iter::repeat(None).take(gap)).collect::<Vec<_>>();
 
 		assert_eq!(received_shards.len(), self.n);
 
@@ -548,11 +537,9 @@ impl ReedSolomon {
 			.inspect(|erased| existential_count += !*erased as usize)
 			.collect::<Vec<bool>>();
 
-
 		if existential_count < self.k {
 			return Err(Error::NeedMoreShards { have: existential_count, min: self.k, all: self.n });
 		}
-
 
 		// Evaluate error locator polynomial only once
 		let mut error_poly_in_log = [Multiplier(0); FIELD_SIZE];

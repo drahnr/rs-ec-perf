@@ -1,4 +1,3 @@
-
 /// Error type for interfacing with the novel poly basis
 #[non_exhaustive]
 #[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]

@@ -1,7 +1,7 @@
 use reed_solomon_performance::*;
 use reed_solomon_tester::*;
 
-use color_eyre::{Result, eyre, install};
+use color_eyre::{eyre, install, Result};
 
 fn main() -> Result<()> {
 	color_eyre::install()?;
@@ -15,7 +15,6 @@ fn main() -> Result<()> {
 	{
 		roundtrip(novelpoly::cxx::encode, novelpoly::cxx::reconstruct, &BYTES[..TEST_DATA_CHUNK_SIZE], N_SHARDS)?;
 	}
-
 
 	#[cfg(feature = "naive")]
 	{

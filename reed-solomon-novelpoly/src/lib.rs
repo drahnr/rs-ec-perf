@@ -12,9 +12,9 @@ pub mod cxx;
 #[cfg(test)]
 mod test {
 	use super::*;
-    use reed_solomon_tester::{roundtrip, BYTES};
+	use reed_solomon_tester::{roundtrip, BYTES};
 
-    const N_SHARDS: usize = 2000;
+	const N_SHARDS: usize = 2000;
 
 	#[cfg(feature = "naive")]
 	#[test]

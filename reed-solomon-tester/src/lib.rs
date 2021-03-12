@@ -1,7 +1,7 @@
 use rand::prelude::*;
 use rand::seq::index::IndexVec;
-use std::result;
 use std::error;
+use std::result;
 
 pub static SMALL_RNG_SEED: [u8; 32] = [
 	0, 6, 0xFA, 0, 0x37, 3, 19, 89, 32, 032, 0x37, 0x77, 77, 0b11, 112, 52, 12, 40, 82, 34, 0, 0, 0, 1, 4, 4, 1, 4, 99,
@@ -10,7 +10,6 @@ pub static SMALL_RNG_SEED: [u8; 32] = [
 
 /// Demo test data, generated via `build.rs`.
 pub const BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rand_data.bin"));
-
 
 /// Alias type for API clarity.
 pub type Shard<'a> = &'a [u8];
@@ -34,47 +33,51 @@ pub fn assert_recovery(payload: &[u8], reconstructed_payload: &[u8], dropped_ind
 	});
 }
 
-
 /// Drop half the shards at the beginning, and half of them at the end.
 pub fn deterministic_drop_shards<T: Sized, G: rand::SeedableRng + rand::Rng>(
-    codewords: &mut [Option<T>],
-    n: usize,
-    k: usize,
-    _rng: &mut G,
+	codewords: &mut [Option<T>],
+	n: usize,
+	k: usize,
+	_rng: &mut G,
 ) -> IndexVec {
-    let l = codewords.len();
-    let mut v = Vec::with_capacity(n - k);
-    // k is a power of 2
-    let half = (n - k) >> 1;
-    for i in 0..half {
-        codewords[i] = None;
-        v.push(i);
-    }
-    // if the codewords is shorter than n
-    // the remaining ones were
-    // already dropped implicitly
-    for i in n - half..n {
-        if i < l {
-            codewords[i] = None;
-            v.push(i);
-        }
-    }
-    IndexVec::from(v)
+	let l = codewords.len();
+	let mut v = Vec::with_capacity(n - k);
+	// k is a power of 2
+	let half = (n - k) >> 1;
+	for i in 0..half {
+		codewords[i] = None;
+		v.push(i);
+	}
+	// if the codewords is shorter than n
+	// the remaining ones were
+	// already dropped implicitly
+	for i in n - half..n {
+		if i < l {
+			codewords[i] = None;
+			v.push(i);
+		}
+	}
+	IndexVec::from(v)
 }
 
 pub fn deterministic_drop_shards_clone<T: Sized + Clone>(
-    codewords: &[T],
-    n: usize,
-    k: usize,
+	codewords: &[T],
+	n: usize,
+	k: usize,
 ) -> (Vec<Option<T>>, IndexVec) {
-    let mut rng = SmallRng::from_seed(SMALL_RNG_SEED);
-    let mut codewords = codewords.into_iter().map(|x| Some(x.clone())).collect::<Vec<Option<T>>>();
-    let idx = deterministic_drop_shards::<T, SmallRng>(&mut codewords, n, k, &mut rng);
-    assert!(idx.len() <= n - k);
-    (codewords, idx)
+	let mut rng = SmallRng::from_seed(SMALL_RNG_SEED);
+	let mut codewords = codewords.into_iter().map(|x| Some(x.clone())).collect::<Vec<Option<T>>>();
+	let idx = deterministic_drop_shards::<T, SmallRng>(&mut codewords, n, k, &mut rng);
+	assert!(idx.len() <= n - k);
+	(codewords, idx)
 }
 
-pub fn drop_random_max<T: Sized + Clone>(shards: &mut [Option<T>], n: usize, k: usize, rng: &mut impl rand::Rng) -> IndexVec {
+pub fn drop_random_max<T: Sized + Clone>(
+	shards: &mut [Option<T>],
+	n: usize,
+	k: usize,
+	rng: &mut impl rand::Rng,
+) -> IndexVec {
 	let l = shards.len();
 	let already_dropped = n.saturating_sub(l);
 	let iv = rand::seq::index::sample(rng, l, n - k - already_dropped);
@@ -87,15 +90,25 @@ pub fn drop_random_max<T: Sized + Clone>(shards: &mut [Option<T>], n: usize, k: 
 	iv
 }
 
-pub fn roundtrip<'s, Enc, Recon, S, E>(encode: Enc, reconstruct: Recon, payload: &'s [u8], target_shard_count: usize) -> result::Result<(), E>
+pub fn roundtrip<'s, Enc, Recon, S, E>(
+	encode: Enc,
+	reconstruct: Recon,
+	payload: &'s [u8],
+	target_shard_count: usize,
+) -> result::Result<(), E>
 where
 	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<S>, E>,
 	Recon: Fn(Vec<Option<S>>, usize) -> result::Result<Vec<u8>, E>,
-    E: error::Error + Send + Sync + 'static,
-	S: AsRef<[u8]> + AsRef<[[u8;2]]> + Sized + Clone,
+	E: error::Error + Send + Sync + 'static,
+	S: AsRef<[u8]> + AsRef<[[u8; 2]]> + Sized + Clone,
 {
-	let v =
-		roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E>(encode, reconstruct, payload, target_shard_count, drop_random_max)?;
+	let v = roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E>(
+		encode,
+		reconstruct,
+		payload,
+		target_shard_count,
+		drop_random_max,
+	)?;
 	Ok(v)
 }
 
@@ -107,8 +120,8 @@ pub fn roundtrip_w_drop_closure<'s, Enc, Recon, DropFun, RandGen, S, E>(
 	mut drop_rand: DropFun,
 ) -> result::Result<(), E>
 where
-    E: error::Error + Send + Sync + 'static,
-	S: AsRef<[u8]> + AsRef<[[u8;2]]> + Sized + Clone,
+	E: error::Error + Send + Sync + 'static,
+	S: AsRef<[u8]> + AsRef<[[u8; 2]]> + Sized + Clone,
 	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<S>, E>,
 	Recon: Fn(Vec<Option<S>>, usize) -> result::Result<Vec<u8>, E>,
 	DropFun: for<'z> FnMut(&'z mut [Option<S>], usize, usize, &mut RandGen) -> IndexVec,
@@ -123,7 +136,8 @@ where
 	// for feeding into reconstruct_shards
 	let mut received_shards = shards.into_iter().map(Some).collect::<Vec<Option<S>>>();
 
-	let dropped_indices = drop_rand(received_shards.as_mut_slice(), target_shard_count, target_shard_count / 3, &mut rng);
+	let dropped_indices =
+		drop_rand(received_shards.as_mut_slice(), target_shard_count, target_shard_count / 3, &mut rng);
 
 	let recovered_payload = reconstruct(received_shards, target_shard_count)?;
 

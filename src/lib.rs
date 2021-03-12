@@ -1,7 +1,6 @@
 use rand::prelude::*;
 use rand::seq::index::IndexVec;
 
-
 use reed_solomon_tester::BYTES;
 
 #[cfg(feature = "novelpoly")]
@@ -26,7 +25,6 @@ mod test {
 	}
 
 	#[cfg(feature = "novelpoly")]
-
 	#[test]
 	fn novelpoly_roundtrip() -> Result<()> {
 		roundtrip(novelpoly::encode, novelpoly::reconstruct, &BYTES[..TEST_DATA_CHUNK_SIZE], N_SHARDS)

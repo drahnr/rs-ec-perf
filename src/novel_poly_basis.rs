@@ -48,7 +48,7 @@ pub fn encode_low(data: &[Additive], k: usize, codeword: &mut [Additive], n: usi
 	// split after the first k
 	let (codeword_first_k, codeword_skip_first_k) = codeword.split_at_mut(k);
 
-    AFFT.inverse_afft(codeword_first_k, k, 0);
+    inverse_afft(codeword_first_k, k, 0);
 
 	// the first codeword is now the basis for the remaining transforms
 	// denoted `M_topdash`
@@ -57,7 +57,7 @@ pub fn encode_low(data: &[Additive], k: usize, codeword: &mut [Additive], n: usi
 		let codeword_at_shift = &mut codeword_skip_first_k[(shift - k)..shift];
 		// copy `M_topdash` to the position we are currently at, the n transform
 		mem_cpy(codeword_at_shift, codeword_first_k);
-		AFFT.afft(codeword_at_shift, k, shift);
+		afft(codeword_at_shift, k, shift);
 	}
 
 	// restore `M` from the derived ones
@@ -86,13 +86,13 @@ pub fn encode_high(data: &[Additive], k: usize, parity: &mut [Additive], mem: &m
 	while i < n {
 		mem_cpy(&mut mem[..t], &data[(i - t)..t]);
 
-		AFFT.inverse_afft(mem, t, i);
+		inverse_afft(mem, t, i);
 		for j in 0..t {
 			parity[j] ^= mem[j];
 		}
 		i += t;
 	}
-	AFFT.afft(parity, t, 0);
+	afft(parity, t, 0);
 }
 
 // Compute the evaluations of the error locator polynomial
@@ -132,37 +132,11 @@ fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasure: &[bool]
 		codeword[i] = if erasure[i] { Additive(0) } else { codeword[i].mul(log_walsh2[i]) };
 	}
 
-	AFFT.inverse_afft(codeword, n, 0);
+	inverse_afft(codeword, n, 0);
 
-	// formal derivative
+	tweaked_formal_derivative(codeword, n);
 
-    // We change nothing when multiplying by b from B.
-    #[cfg(test)]
-	for i in (0..n).into_iter().step_by(2) {
-		let b = Multiplier(ONEMASK) - unsafe { B[i >> 1] };
-		#[cfg(test)]
-		let x: [_; 2] = [codeword[i], codeword[i + 1]];
-		codeword[i] = codeword[i].mul(b);
-		codeword[i + 1] = codeword[i + 1].mul(b);
-		#[cfg(test)]
-		assert_eq!(x, [codeword[i], codeword[i + 1]]);
-	}
-
-	formal_derivative(codeword, n);
-
-	// Again changes nothing by multiplying by b although b differs here.
-	#[cfg(test)]
-	for i in (0..n).into_iter().step_by(2) {
-		#[cfg(test)]
-		let x: [_; 2] = [codeword[i], codeword[i + 1]];
-		let b = unsafe { B[i >> 1] };
-		codeword[i] = codeword[i].mul(b);
-		codeword[i + 1] = codeword[i + 1].mul(b);
-		#[cfg(test)]
-		assert_eq!(x, [codeword[i], codeword[i + 1]]);
-	}
-
-	AFFT.afft(codeword, n, 0);
+	afft(codeword, n, 0);
 
 	for i in 0..recover_up_to {
 		codeword[i] = if erasure[i] { codeword[i].mul(log_walsh2[i]) } else { Additive(0) };
@@ -256,7 +230,7 @@ impl ReedSolomon {
 	}
 
 	pub fn new(n: usize, k: usize, validator_count: usize) -> Result<Self> {
-		setup();
+		// setup();
 		if !is_power_of_2(n) && !is_power_of_2(k) {
 			Err(Error::ParamterMustBePowerOf2 { n, k })
 		} else {
@@ -557,19 +531,19 @@ mod test {
 		let mut data = (0..N).into_iter().map(|_x| rand_gf_element()).collect::<Vec<Additive>>();
 		let expected = data.clone();
 
-		AFFT.afft(&mut data, N, N / 4);
+		afft(&mut data, N, N / 4);
 
 		// make sure something is done
 		assert!(data.iter().zip(expected.iter()).filter(|(a, b)| { a != b }).count() > 0);
 
-		AFFT.inverse_afft(&mut data, N, N / 4);
+		inverse_afft(&mut data, N, N / 4);
 
 		itertools::assert_equal(data, expected);
 	}
 
 	#[test]
 	fn sub_encode_decode() -> Result<()> {
-		setup();
+		// setup();
 		let mut rng = rand::thread_rng();
 
 		const N: usize = 32;
@@ -650,7 +624,7 @@ mod test {
 		const N: usize = N_VALIDATORS;
 		const K: usize = 32;
 
-		setup();
+		// setup();
 
 		const K2: usize = K * 2;
 
@@ -701,7 +675,7 @@ mod test {
 		const N: usize = 2048;
 		const K: usize = 512;
 
-		setup();
+		// setup();
 
 		const K2: usize = K * 2;
 
@@ -794,7 +768,7 @@ mod test {
 
 		let mut data = EXPECTED.clone();
 
-		AFFT.afft(&mut data, N, N / 4);
+		afft(&mut data, N, N / 4);
 
 		println!("novel basis(rust):");
 		data.iter().for_each(|sym| {
@@ -802,7 +776,7 @@ mod test {
 		});
 		println!("");
 
-		AFFT.inverse_afft(&mut data, N, N / 4);
+		inverse_afft(&mut data, N, N / 4);
 		itertools::assert_equal(data.iter(), EXPECTED.iter());
 	}
 
@@ -811,7 +785,7 @@ mod test {
 		const N: usize = 256;
 		const K: usize = 8;
 
-		setup();
+		// setup();
 
 		//-----------Generating message----------
 		//message array

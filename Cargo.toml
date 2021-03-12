@@ -14,7 +14,8 @@ cc = { version = "1.0", features = ["parallel"], optional = true }
 [dependencies]
 reed-solomon-erasure = { version = "4.0", features = ["simd-accel"], optional = true }
 
-lazy_static = "1.4.0"
+static_init = "0.5.2"
+# lazy_static = "1.4.0"
 derive_more = { version = "0.99.0", default-features = false, features = ["add_assign", "add"] }
 # constuneval = "0.1.0"
 

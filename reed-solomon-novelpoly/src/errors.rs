@@ -1,3 +1,5 @@
+
+/// Error type for interfacing with the novel poly basis
 #[non_exhaustive]
 #[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
 pub enum Error {
@@ -17,4 +19,5 @@ pub enum Error {
 	ParamterMustBePowerOf2 { n: usize, k: usize },
 }
 
+/// Result alias to simplify API.
 pub type Result<T> = std::result::Result<T, Error>;

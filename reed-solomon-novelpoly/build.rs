@@ -26,8 +26,8 @@ where
 /// We thus assume it depends only upon the field for now.
 #[allow(dead_code)]
 fn write_field_tables<W: std::io::Write>(mut w: W) -> std::io::Result<()> {
-	let mut log_table: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
-	let mut exp_table: [GFSymbol; FIELD_SIZE] = [0_u16; FIELD_SIZE];
+	let mut log_table: [Elt; FIELD_SIZE] = [0_u16; FIELD_SIZE];
+	let mut exp_table: [Elt; FIELD_SIZE] = [0_u16; FIELD_SIZE];
 
 	let mas: Elt = (1 << FIELD_BITS - 1) - 1;
 	let mut state: usize = 1;
@@ -53,7 +53,7 @@ fn write_field_tables<W: std::io::Write>(mut w: W) -> std::io::Result<()> {
 	}
 
 	for i in 0..FIELD_SIZE {
-		exp_table[log_table[i] as usize] = i as GFSymbol;
+		exp_table[log_table[i] as usize] = i as Elt;
 	}
 	exp_table[ONEMASK as usize] = exp_table[0];
 
@@ -91,29 +91,12 @@ pub fn gen_field_tables() -> std::io::Result<()> {
 	Ok(())
 }
 
-fn gen_10mb_rand_data() -> Result<()> {
-	let mut rng = rand::thread_rng();
-	let dice = Uniform::<u8>::new_inclusive(0, 255);
-	let data = dice.sample_iter(&mut rng).take(10_000_000).collect::<Vec<_>>();
-
-	let out = env::var("OUT_DIR").expect("OUT_DIR is set by cargo after process launch. qed");
-	let dest = PathBuf::from(out).join("rand_data.bin");
-
-	let mut f = OpenOptions::new().truncate(true).write(true).create(true).open(&dest)?;
-
-	f.write_all(&data)?;
-
-	f.flush()?;
-
-	Ok(())
-}
-
-#[cfg(feature = "cmp-with-cxx")]
+#[cfg(feature = "with-alt-cxx-impl")]
 fn gen_ffi_novel_poly_basis_lib() {
 	cc::Build::new().file("cxx/RSErasureCode.c").file("cxx/sha-256.c").include("cxx").compile("novelpolycxxffi");
 }
 
-#[cfg(feature = "cmp-with-cxx")]
+#[cfg(feature = "with-alt-cxx-impl")]
 fn gen_ffi_novel_poly_basis_bindgen() {
 	println!("cargo:rustc-link-lib=novelpolycxxffi");
 
@@ -130,13 +113,14 @@ fn gen_ffi_novel_poly_basis_bindgen() {
 	bindings.write_to_file(out_path.join("bindings.rs")).expect("Couldn't write bindings!");
 }
 
-fn main() -> Result<()> {
+fn main() -> std::io::Result<()> {
 	gen_field_tables()?;
 
-	#[cfg(feature = "cmp-with-cxx")]
+	#[cfg(feature = "with-alt-cxx-impl")]
 	{
 		gen_ffi_novel_poly_basis_lib();
 		gen_ffi_novel_poly_basis_bindgen();
 	}
-	gen_10mb_rand_data()
+
+	Ok(())
 }

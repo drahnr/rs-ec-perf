@@ -1,6 +1,7 @@
 use honggfuzz::fuzz;
 
 use rs::*;
+use rstester::*;
 
 use arbitrary::*;
 

@@ -57,7 +57,7 @@ macro_rules! instanciate_upper_bound_test {
 pub mod tests {
 	instanciate_upper_bound_test!("novel poly", novel_poly_basis);
 
-	#[cfg(feature = "status-quo")]
+	#[cfg(feature = "naive")]
 	instanciate_upper_bound_test!("status quo", status_quo);
 }
 
@@ -144,12 +144,12 @@ pub mod parameterized {
 				},
 			);
 		}
-		#[cfg(feature = "status-quo")]
+		#[cfg(feature = "naive")]
 		{
 			use crate::status_quo::encode;
 
 			group.bench_with_input(
-				BenchmarkId::new("status-quo-encode", param.to_string()),
+				BenchmarkId::new("naive-encode", param.to_string()),
 				&payload_size,
 				|b, &payload_size| {
 					b.iter(|| {
@@ -186,12 +186,12 @@ pub mod parameterized {
 			);
 		}
 
-		#[cfg(feature = "status-quo")]
+		#[cfg(feature = "naive")]
 		{
 			use crate::status_quo::{encode, reconstruct};
 
 			group.bench_with_input(
-				BenchmarkId::new("status-quo-reconstruct", param.to_string()),
+				BenchmarkId::new("naive-reconstruct", param.to_string()),
 				&payload_size,
 				|b, &payload_size| {
 					let encoded = encode(&BYTES[..payload_size], validator_count).unwrap();

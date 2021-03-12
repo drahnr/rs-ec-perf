@@ -1,16 +1,25 @@
-use rs_ec_perf::*;
+use reed_solomon_performance::*;
+use reed_solomon_tester::*;
+
+use color_eyre::{Result, eyre, install};
 
 fn main() -> Result<()> {
-	#[cfg(feature = "cmp-with-cxx")]
+	color_eyre::install()?;
+
+	#[cfg(feature = "novelpoly")]
 	{
-		// roundtrip(novel_poly_basis_cxx::encode, novel_poly_basis_cxx::reconstruct, &BYTES[..DATA_SHARDS * 2], DATA_SHARDS)?;
+		roundtrip(novelpoly::encode, novelpoly::reconstruct, &BYTES[..TEST_DATA_CHUNK_SIZE], N_SHARDS)?;
 	}
 
-	roundtrip(novel_poly_basis::encode, novel_poly_basis::reconstruct, &BYTES[..], N_VALIDATORS)?;
-
-	#[cfg(feature = "status-quo")]
+	#[cfg(feature = "novelpoly-with-alt-cxx-impl")]
 	{
-		roundtrip(status_quo::encode, status_quo::reconstruct, &BYTES[..], N_VALIDATORS)?;
+		roundtrip(novelpoly::cxx::encode, novelpoly::cxx::reconstruct, &BYTES[..TEST_DATA_CHUNK_SIZE], N_SHARDS)?;
+	}
+
+
+	#[cfg(feature = "naive")]
+	{
+		roundtrip(naive::encode, naive::reconstruct, &BYTES[..TEST_DATA_CHUNK_SIZE], N_SHARDS)?;
 	}
 
 	Ok(())

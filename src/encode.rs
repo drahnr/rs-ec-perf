@@ -34,6 +34,8 @@ pub fn encode_low(data: &[Additive], k: usize, codeword: &mut [Additive], n: usi
 }
 
 
+// TODO: Make encode_high actually work again!  Add tests!
+
 //data: message array. parity: parity array. mem: buffer(size>= n-k)
 //Encoding alg for k/n>0.5: parity is a power of two.
 pub fn encode_high(data: &[Additive], k: usize, parity: &mut [Additive], mem: &mut [Additive], n: usize) {

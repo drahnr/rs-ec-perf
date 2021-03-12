@@ -19,16 +19,17 @@ pub fn formal_derivative(cos: &mut [Additive], size: usize) {
 }
 
 
+/// Additive FFT and inverse in the "novel polynomial basis"
 #[allow(non_snake_case)]
-pub struct AFFT {
-    /// Twisted factors used in FFT
-    pub skew: [Multiplier; ONEMASK as usize],
+pub struct AdditiveFFT {
+    /// Multiplier form of twisted factors used in AdditiveFFT
+    pub skew: [Multiplier; ONEMASK as usize], // skew_multiplier
     /// Factors used in formal derivative, actually all zero if field was constructed correctly.
     #[cfg(test)]
     pub B: [Multiplier; FIELD_SIZE >> 1],
 }
 
-impl AFFT {
+impl AdditiveFFT {
 
 // We want the low rate scheme given in
 // https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
@@ -156,7 +157,7 @@ pub fn afft(&self, data: &mut [Additive], size: usize, index: usize) {
 
 //initialize SKEW_FACTOR and B
 #[allow(non_snake_case)]
-fn initialize() -> AFFT {
+fn initalize() -> AdditiveFFT {
     // We cannot yet identify if base has an additive or multiplicative
     // representation, or mybe something else entirely.  (TODO)
 	let mut base: [GFSymbol; FIELD_BITS - 1] = Default::default();
@@ -210,15 +211,15 @@ fn initialize() -> AFFT {
 	}
 
 	// Convert skew factors from Additive to Multiplier form
-    let mut skew = [Multiplier(0); ONEMASK as usize];
+    let mut skew_multiplier = [Multiplier(0); ONEMASK as usize];
 	for i in 0..(ONEMASK as usize) {
 		// SKEW_FACTOR[i] = LOG_TABLE[SKEW_FACTOR[i] as usize];
-		SKEW_FACTOR[i] = skew_additive[i].to_multiplier();
+		skew_multiplier[i] = skew_additive[i].to_multiplier();
 	}
 
-    #[cfg(test)]
-    AFFT {
-        skew,
+    AdditiveFFT {
+        // skew_additive,
+        skew: skew_multiplier,
         #[cfg(test)]
         B: {
             let mut B = [Multiplier(0); FIELD_SIZE >> 1];
@@ -248,4 +249,9 @@ fn initialize() -> AFFT {
 
 }
 
-} // impl AFFT
+} // impl AdditiveFFT
+
+use lazy_static::lazy_static;
+lazy_static! {
+    static ref AFFT: AdditiveFFT = AdditiveFFT::initalize();
+}

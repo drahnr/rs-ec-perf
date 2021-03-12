@@ -174,12 +174,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "constuneval"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16d7418ef3ac5adeb1685bba05528320ee5f4feb9315c680d1fe8cecaf0e8a16"
-
-[[package]]
 name = "cpuid-bool"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -741,12 +735,12 @@ dependencies = [
  "assert_matches",
  "bindgen",
  "cc",
- "constuneval",
  "criterion",
  "derive_more",
  "fs-err",
  "iai",
  "itertools 0.10.0",
+ "lazy_static",
  "rand",
  "reed-solomon-erasure",
  "sha2",

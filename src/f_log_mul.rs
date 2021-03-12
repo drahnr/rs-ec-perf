@@ -17,7 +17,7 @@ impl Additive {
 		Additive(x as Elt)
 	}
 
-	// pub const ZERO: Additive = Additive(0);
+	pub const ZERO: Additive = Additive(0);
 }
 
 #[cfg(table_bootstrap_complete)]

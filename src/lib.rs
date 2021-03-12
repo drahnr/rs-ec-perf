@@ -1,4 +1,8 @@
+
 extern crate derive_more;
+
+#[macro_use]
+extern crate lazy_static;
 
 pub static SMALL_RNG_SEED: [u8; 32] = [
 	0, 6, 0xFA, 0, 0x37, 3, 19, 89, 32, 032, 0x37, 0x77, 77, 0b11, 112, 52, 12, 40, 82, 34, 0, 0, 0, 1, 4, 4, 1, 4, 99,

@@ -7,6 +7,8 @@ pub const FIELD_SIZE: usize = 1_usize << FIELD_BITS;
 
 include!("f_log_mul.rs");
 
+// #[cfg(table_bootstrap_complete)]
+include!("afft.rs");
 
 // must be placed in a separate file, such that the preproc never tries to eval OUT_DIR
 // in env which does not exist in the build.rs case

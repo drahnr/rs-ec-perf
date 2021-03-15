@@ -2,17 +2,17 @@ use std::env;
 
 use std::io;
 use std::path::PathBuf;
+use std::fmt;
 
 use fs_err as fs;
 use fs::OpenOptions;
-
 include!("src/f2e16.rs");
 
 /// Write Rust `const` declaration
-pub fn write_const<W, T>(mut w: W, name: &str, value: &T, type_name: &str) -> Result<()>
+pub fn write_const<W, T>(mut w: W, name: &str, value: &T, type_name: &str) -> io::Result<()>
 where
-	W: std::io::Write,
-	T: std::fmt::Debug,
+	W: io::Write,
+	T: fmt::Debug,
 {
 	write!(w, "pub(crate) static {}: {} = {:#?};\n\n", name, type_name, value)
 }

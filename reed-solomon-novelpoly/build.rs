@@ -1,6 +1,6 @@
 use std::env;
 
-use std::io::{Result, Write};
+use std::io;
 use std::path::PathBuf;
 
 use fs_err as fs;
@@ -25,7 +25,7 @@ where
 /// out how to shrink `LOG_WALSH` below the size of the full field (TODO).
 /// We thus assume it depends only upon the field for now.
 #[allow(dead_code)]
-fn write_field_tables<W: std::io::Write>(mut w: W) -> std::io::Result<()> {
+fn write_field_tables<W: io::Write>(mut w: W) -> io::Result<()> {
 	let mut log_table: [Elt; FIELD_SIZE] = [0_u16; FIELD_SIZE];
 	let mut exp_table: [Elt; FIELD_SIZE] = [0_u16; FIELD_SIZE];
 
@@ -76,7 +76,7 @@ fn write_field_tables<W: std::io::Write>(mut w: W) -> std::io::Result<()> {
 /// dislikes build artifacts appearing outside env!("OUT_DIR") and we
 /// require tables to build other tables.
 /// ref.  https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
-pub fn gen_field_tables() -> std::io::Result<()> {
+pub fn gen_field_tables() -> io::Result<()> {
 	// to avoid a circular loop, we need to import a dummy
 	// table, such that we do not depend on the thing we are
 	// about to spawn
@@ -113,7 +113,7 @@ fn gen_ffi_novel_poly_basis_bindgen() {
 	bindings.write_to_file(out_path.join("bindings.rs")).expect("Couldn't write bindings!");
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> io::Result<()> {
 	gen_field_tables()?;
 
 	#[cfg(feature = "with-alt-cxx-impl")]

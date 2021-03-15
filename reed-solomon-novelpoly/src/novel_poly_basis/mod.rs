@@ -15,7 +15,7 @@ mod reconstruct;
 mod util;
 mod wrapped_shard;
 
-pub use self::algorithms::*;
+pub(crate) use self::algorithms::*;
 pub use self::encode::*;
 pub use self::reconstruct::*;
 pub use self::util::*;

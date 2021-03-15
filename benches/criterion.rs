@@ -21,7 +21,7 @@ macro_rules! instanciate_upper_bound_test {
 			use criterion::{black_box, Criterion};
 			use rand::{rngs::SmallRng, SeedableRng};
 			use reed_solomon_performance::$mp::{encode, reconstruct};
-			use reed_solomon_tester::{roundtrip, BYTES, SMALL_RNG_SEED};
+			use reed_solomon_tester::{BYTES, SMALL_RNG_SEED};
 
 			#[test]
 			fn criterion_roundtrip_integrity() {

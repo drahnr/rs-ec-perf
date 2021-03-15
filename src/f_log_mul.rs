@@ -89,3 +89,24 @@ pub fn walsh(data: &mut [Multiplier], size: usize) {
 	}
 }
 
+
+/*
+#[test]
+fn cantor_basis() {
+    /*
+    for b in &BASE {
+        let b = Additive(*b);
+        let square = b.mul(b.to_multiplier());
+        assert!(BASE.contains(& (square ^ b).0 ));
+    }
+    */
+    for w in BASE.windows(2) {
+        let b = Additive(w[1]);
+        let square = b.mul(b.to_multiplier());
+        let a = w[0];
+        let eq = if a == (square ^ b).0 { "==" } else { "!=" };
+        println!("{:#b} {} {:#b}\n", a, eq, (square ^ b).0);
+        // assert_eq!(a, (square ^ b).0);
+    }
+}
+*/

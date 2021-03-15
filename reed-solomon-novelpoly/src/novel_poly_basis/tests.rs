@@ -8,8 +8,6 @@ use rand::seq::index::IndexVec;
 use rand::thread_rng;
 use reed_solomon_tester::*;
 
-use super::*;
-
 /*
 // If this passes then you do not require the b_not_one feature
 fn b_is_one() {

@@ -7,8 +7,7 @@ mod cxx {
 	include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-use crate::{novel_poly_basis, WrappedShard};
-use rand::Rng;
+use crate::{novel_poly_basis::{self, WrappedShard}};
 
 pub fn setup() {
 	use std::sync::Once;
@@ -32,6 +31,7 @@ pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>) -> Option<Vec<u8>
 
 #[cfg(test)]
 mod tests {
+	use rand::Rng;
 	use rand::prelude::SmallRng;
 
 	use crate::novel_poly_basis::{fft_in_novel_poly_basis, GFSymbol};

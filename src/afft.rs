@@ -239,7 +239,7 @@ impl AdditiveFFT {
     		// TODO: But why?  
     		//
     		// let idx = mul_table(base[m], LOG_TABLE[(base[m] ^ 1_u16) as usize]);
-    		let idx = Additive(base[m]).mul( Additive(base[m] ^ 1_u16).to_multiplier() );
+    		let idx = Additive(base[m]).mul( Additive(base[m] ^ 1).to_multiplier() );
             // WTF?!? 
     		// base[m] = ONEMASK - LOG_TABLE[idx as usize];
             base[m] = ONEMASK - idx.to_multiplier().0;
@@ -252,7 +252,7 @@ impl AdditiveFFT {
     		for i in (m + 1)..(FIELD_BITS - 1) {
     			// WTF?!?
     			// let b = LOG_TABLE[(base[i] as u16 ^ 1_u16) as usize] as u32 + base[m] as u32;
-    			let b = Additive(base[i] ^ 1_u16).to_multiplier().to_wide() + (base[m] as Wide);
+    			let b = Additive(base[i] ^ 1).to_multiplier().to_wide() + (base[m] as Wide);
     			let b = b % (ONEMASK as Wide);
     			// base[i] = mul_table(base[i], b as u16);
     			base[i] = Additive(base[i]).mul(Multiplier(b as Elt)).0;

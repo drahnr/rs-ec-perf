@@ -21,6 +21,7 @@ pub use wrapped_shard::*;
 #[cfg(feature = "status-quo")]
 pub mod status_quo;
 
+pub mod f256;
 pub mod f2e16;
 
 pub mod novel_poly_basis;

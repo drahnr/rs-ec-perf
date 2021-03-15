@@ -42,8 +42,8 @@ pub(crate) fn write_field_tables(out: std::path::PathBuf) -> std::io::Result<()>
 	let path = out.join(format!("table_{}.rs", FIELD_NAME));
 	let mut w = fs_err::OpenOptions::new().create(true).truncate(true).write(true).open(path) ?;
 
-	write_const(&mut w, "LOG_TABLE", &log_table, "[u16; FIELD_SIZE]") ?;
-	write_const(&mut w, "EXP_TABLE", &exp_table, "[u16; FIELD_SIZE]") ?;
+	write_const(&mut w, "LOG_TABLE", &log_table, "[Elt; FIELD_SIZE]") ?;
+	write_const(&mut w, "EXP_TABLE", &exp_table, "[Elt; FIELD_SIZE]") ?;
 
 	// mem_cpy(&mut log_walsh[..], &log_table[..]);
 	let log_walsh = log_table.clone();

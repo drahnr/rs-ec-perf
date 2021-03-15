@@ -16,7 +16,10 @@ where
 	write!(w, "pub(crate) static {}: {} = {:#?};\n\n", name, type_name, value)
 }
 
-mod f2e8 {
+mod f256 {
+    use super::write_const;
+    include!("src/f256.rs");
+    include!("src/f_build.rs");    
 }
 
 mod f2e16 {
@@ -32,16 +35,13 @@ mod f2e16 {
 /// require tables to build other tables.
 /// ref.  https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 pub fn gen_field_tables() -> std::io::Result<()> {
-	// to avoid a circular loop, we need to import a dummy
-	// table, such that we do not depend on the thing we are
-	// about to spawn
+	// Avoid importing anything that depends upon the table inside build.rs
 	println!("cargo:rustc-cfg=table_bootstrap_complete");
 
 	let out = env::var("OUT_DIR").expect("OUT_DIR is set by cargo after process launch. qed");
-
-	let path = PathBuf::from(out).join(format!("table_{}.rs", "f2e16"));
-	let f = OpenOptions::new().create(true).truncate(true).write(true).open(path)?;
-	f2e16::write_field_tables(f)?;
+    let out = std::path::PathBuf::from(out);
+	f256::write_field_tables(out.clone()) ?;
+	f2e16::write_field_tables(out) ?;
 
 	Ok(())
 }

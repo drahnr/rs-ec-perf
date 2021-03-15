@@ -7,9 +7,9 @@
 /// out how to shrink `LOG_WALSH` below the size of the full field (TODO).
 /// We thus assume it depends only upon the field for now.
 #[allow(dead_code)]
-pub(crate) fn write_field_tables<W: std::io::Write>(mut w: W) -> std::io::Result<()> {
-	let mut log_table: [Elt; FIELD_SIZE] = [0_u16; FIELD_SIZE];
-	let mut exp_table: [Elt; FIELD_SIZE] = [0_u16; FIELD_SIZE];
+pub(crate) fn write_field_tables(out: std::path::PathBuf) -> std::io::Result<()> {
+	let mut log_table: [Elt; FIELD_SIZE] = [0; FIELD_SIZE];
+	let mut exp_table: [Elt; FIELD_SIZE] = [0; FIELD_SIZE];
 
 	let mas: Elt = (1 << FIELD_BITS - 1) - 1;
 	let mut state: usize = 1;
@@ -39,8 +39,11 @@ pub(crate) fn write_field_tables<W: std::io::Write>(mut w: W) -> std::io::Result
 	}
 	exp_table[ONEMASK as usize] = exp_table[0];
 
-	write_const(&mut w, "LOG_TABLE", &log_table, "[u16; FIELD_SIZE]")?;
-	write_const(&mut w, "EXP_TABLE", &exp_table, "[u16; FIELD_SIZE]")?;
+	let path = out.join(format!("table_{}.rs", FIELD_NAME));
+	let mut w = fs_err::OpenOptions::new().create(true).truncate(true).write(true).open(path) ?;
+
+	write_const(&mut w, "LOG_TABLE", &log_table, "[u16; FIELD_SIZE]") ?;
+	write_const(&mut w, "EXP_TABLE", &exp_table, "[u16; FIELD_SIZE]") ?;
 
 	// mem_cpy(&mut log_walsh[..], &log_table[..]);
 	let log_walsh = log_table.clone();
@@ -48,6 +51,6 @@ pub(crate) fn write_field_tables<W: std::io::Write>(mut w: W) -> std::io::Result
 	log_walsh[0] = Multiplier(0);
 	walsh(&mut log_walsh[..], FIELD_SIZE);
 
-	write_const(w, "LOG_WALSH", &log_walsh, "[Multiplier; FIELD_SIZE]")?;
+	write_const(w, "LOG_WALSH", &log_walsh, "[Multiplier; FIELD_SIZE]") ?;
 	Ok(())
 }

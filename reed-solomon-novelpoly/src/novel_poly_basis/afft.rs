@@ -1,3 +1,5 @@
+use crate::field::FieldT;
+
 use static_init::dynamic;
 
 #[dynamic(0)]
@@ -12,7 +14,7 @@ pub(crate) struct AdditiveFFT<F> {
 
 
 /// Formal derivative of polynomial in the new?? basis
-pub(crate) fn formal_derivative<F>(cos: &mut [Additive<F>], size: usize) {
+pub(crate) fn formal_derivative<F: FieldT>(cos: &mut [Additive<F>], size: usize) {
 	for i in 1..size {
 		let length = ((i ^ i - 1) + 1) >> 1;
 		for j in (i - length)..i {

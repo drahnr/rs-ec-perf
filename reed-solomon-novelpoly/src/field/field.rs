@@ -1,19 +1,65 @@
 use std::ops::*;
 use std::fmt::Debug;
 
-pub trait Primitive: 'static + num::ToPrimitive + num::FromPrimitive + Copy + Clone + AddAssign + Add + Sub + SubAssign + Shl + Shr + ShlAssign + ShrAssign + BitXor + BitXorAssign + BitAnd + BitAndAssign {
+pub trait Primitive:
+'static
++ Debug
++ Copy
++ Clone
++ AddAssign
++ Add<Output=Self>
++ Sub<Output=Self>
++ SubAssign
++ Shl<Output=Self>
++ Shr<Output=Self>
++ ShlAssign
++ ShrAssign
++ BitXor<Output=Self>
++ BitXorAssign
++ BitAnd<Output=Self>
++ BitAndAssign {
 }
 
-impl<T> Primitive for T where T: 'static + num::ToPrimitive + num::FromPrimitive + Debug + Copy + Clone + AddAssign + Add + Sub + SubAssign + Shl + Shr + ShlAssign + ShrAssign + BitXor + BitXorAssign + BitAnd + BitAndAssign {}
+impl<T> Primitive for T where T:
+'static
++ Debug
++ Copy
++ Clone
++ AddAssign
++ Add<Output=Self>
++ Sub<Output=Self>
++ SubAssign
++ Shl<Output=Self>
++ Shr<Output=Self>
++ ShlAssign
++ ShrAssign
++ BitXor<Output=Self>
++ BitXorAssign
++ BitAnd<Output=Self>
++ BitAndAssign {}
 
-// trait AdditiveT<F: FieldT>: Clone + Copy + Debug + Default + BitXor + BitXorAssign + PartialEq + Eq {
+// trait AdditiveT<F: FieldT>: Clone
+// + Copy
+// + Debug
+// + Default
+// + BitXor
+// + BitXorAssign
+// + PartialEq
+// + Eq {
 // 	fn to_wide(self) -> F::Wide;
 // 	fn from_wide(x: F::Wide) -> Additive<F>;
 
 // 	const ZERO: Additive<F><F>;
 // }
 
-// trait MultiplierT<F: FieldT>: Clone + Copy + Debug + Default + BitXor + BitXorAssign + PartialEq + Eq {
+// trait MultiplierT<F: FieldT>: Clone
+// + Copy
+// + Debug
+// + Default
+// + BitXor
+// + BitXorAssign
+// + PartialEq
+// + Eq {
 // 	fn to_multiplier(self) -> Multiplier<F>;
 // 	fn mul(self, other: Multiplier<F>) -> Additive<F>;
 // 	fn mul_assign_slice(selfy: &mut [Self], other: Multiplier<F>);
@@ -49,15 +95,28 @@ castomat_impl!(u16 as u64 as ..);
 castomat_impl!(u32 as u64 as ..);
 castomat_impl!(u16 as usize as ..);
 castomat_impl!(u32 as usize as ..);
-castomat_impl!(u64 as usize as ..);
+castomat_impl!(usize as u64 as ..);
 
-pub trait FieldT: Debug + Sized {
+pub trait FieldT: Debug
++ Sized {
 	const NAME: &'static str;
 
-	type Element: Castomat<Self::Wide> + Primitive;
-	type Wide: Castomat<Self::Element> + Primitive;
-	// type Additive: From<Self::Element> + From<Self::Wide> + AdditiveT<Self>;
-	// type Multiplier: From<Self::Element> + From<Self::Wide> + MultiplierT<Self>;
+	type Element:
+		Castomat<Self::Wide>
+			+ Castomat<usize>
+			+ Primitive;
+
+	type Wide:
+		Castomat<Self::Element>
+			+ Castomat<usize>
+			+ Primitive;
+
+	// type Additive: From<Self::Element>
+// + From<Self::Wide>
+// + AdditiveT<Self>;
+	// type Multiplier: From<Self::Element>
+// + From<Self::Wide>
+// + MultiplierT<Self>;
 
     const GENERATOR: Self::Element;
 

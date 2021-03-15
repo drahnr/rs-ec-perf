@@ -61,20 +61,20 @@ where <F as FieldT>::Element: Debug
 	}
 	exp_table[0] = F::ONEMASK;
 
-	log_table[0] = 0.cast_as() as F::Element;
+	log_table[0] = 0_usize.cast_as() as F::Element;
 	for i in 0..F::FIELD_BITS {
 		for j in 0..(1 << i) {
 			log_table[j + (1 << i)] = log_table[j] ^ F::BASE[i] as F::Element;
 		}
 	}
-	for i in 0..F::FIELD_SIZE {
-		log_table[i] = exp_table[usize::cast_from(log_table[i])];
+	for i in 0_usize..F::FIELD_SIZE {
+		log_table[i] = exp_table[log_table[i].cast_as() as usize];
 	}
 
-	for i in 0..F::FIELD_SIZE {
-		exp_table[usize::cast_from(log_table[i])] = F::Element::cast_from(i);
+	for i in 0_usize..F::FIELD_SIZE {
+		exp_table[log_table[i].cast_as() as usize] = i.cast_as() as F::Element;
 	}
-	exp_table[usize::cast_from(F::ONEMASK)] = exp_table[0];
+	exp_table[F::ONEMASK.cast_as() as usize] = exp_table[0];
 
 	write_const(&mut w, "LOG_TABLE", &log_table, format!("[{}; FIELD_SIZE]", std::any::type_name::<F::Element>()))?;
 	write_const(&mut w, "EXP_TABLE", &exp_table, format!("[{}; FIELD_SIZE]", std::any::type_name::<F::Element>()))?;
@@ -105,7 +105,7 @@ pub fn gen_field_tables<F: FieldT>() -> io::Result<()> {
 
 	let path = PathBuf::from(out).join(format!("table_{}.rs", F::NAME));
 	let f = OpenOptions::new().create(true).truncate(true).write(true).open(path)?;
-	write_field_tables::<F>(f)?;
+	write_field_tables::<F,_>(f)?;
 
 	Ok(())
 }

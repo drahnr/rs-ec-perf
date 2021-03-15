@@ -1,5 +1,5 @@
 
-use super::FieldT;
+use super::{FieldT, Castomat};
 
 use derive_more::{Add, AddAssign, BitXor, BitXorAssign, Sub, SubAssign};
 
@@ -88,11 +88,11 @@ pub fn walsh<F: FieldT>(data: &mut [Multiplier<F>], size: usize) {
 				// We deal with data in log form here, but field form looks like:
 				//			 data[i] := data[i] / data[i+depart_no]
 				// data[i+depart_no] := data[i] * data[i+depart_no]
-				let mask = F::ONEMASK as F::Wide;
+				let mask: F::Wide = F::ONEMASK.cast_as() as F::Wide;
 				let tmp2: F::Wide = data[i].to_wide() + mask - data[i + depart_no].to_wide();
 				let tmp1: F::Wide = data[i].to_wide() + data[i + depart_no].to_wide();
-				data[i] = Multiplier(((tmp1 & mask) + (tmp1 >> F::FIELD_BITS)) as F::Element);
-				data[i + depart_no] = Multiplier(((tmp2 & mask) as F::Element + (tmp2 >> F::FIELD_BITS)as F::Element) as F::Element);
+				data[i] = Multiplier(((tmp1 & mask) + (tmp1 >> F::FIELD_BITS)).cast_as() as F::Element);
+				data[i + depart_no] = Multiplier(((tmp2 & mask) + (tmp2 >> F::FIELD_BITS)).cast_as() as F::Element);
 			}
 			j += depart_no_next;
 		}

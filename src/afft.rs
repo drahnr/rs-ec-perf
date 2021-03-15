@@ -36,35 +36,51 @@ pub fn formal_derivative(cos: &mut [Additive], size: usize) {
 /// Formal derivative of polynomial in tweaked?? basis
 #[allow(non_snake_case)]
 pub fn tweaked_formal_derivative(codeword: &mut [Additive], n: usize) {
-    #[cfg(test)]
+    #[cfg(b_is_not_one)]
     let B = unsafe { &AFFT.B };
 
     // We change nothing when multiplying by b from B.
-    #[cfg(test)]
+	#[cfg(b_is_not_one)]
 	for i in (0..n).into_iter().step_by(2) {
 		let b = Multiplier(ONEMASK) - B[i >> 1];
-		#[cfg(test)]
-		let x: [_; 2] = [codeword[i], codeword[i + 1]];
 		codeword[i] = codeword[i].mul(b);
 		codeword[i + 1] = codeword[i + 1].mul(b);
-		#[cfg(test)]
-		assert_eq!(x, [codeword[i], codeword[i + 1]]);
 	}
 
 	formal_derivative(codeword, n);
 
 	// Again changes nothing by multiplying by b although b differs here.
-	#[cfg(test)]
+	#[cfg(b_is_not_one)]
 	for i in (0..n).into_iter().step_by(2) {
-		#[cfg(test)]
-		let x: [_; 2] = [codeword[i], codeword[i + 1]];
 		let b = B[i >> 1];
 		codeword[i] = codeword[i].mul(b);
 		codeword[i + 1] = codeword[i + 1].mul(b);
-		#[cfg(test)]
-		assert_eq!(x, [codeword[i], codeword[i + 1]]);
 	}
 }
+
+/// This test ensure that b can safely be bypassed in tweaked_formal_derivative
+#[cfg(not(b_is_not_one))]
+#[test]
+#[allow(non_snake_case)]
+fn b_is_one() {
+    let B = unsafe { &AFFT.B };
+    fn test_b(b: Multiplier) {
+        for x in 0..FIELD_SIZE {
+            let x = Additive(x as Elt);
+        	assert_eq!(x, x.mul(b));
+        }
+    }
+    let mut old_b = None;
+	for i in (0..FIELD_SIZE).into_iter().step_by(256) {
+        let b = B[i >> 1];
+        if old_b != Some(b) {
+            test_b( Multiplier(ONEMASK) - b );
+            test_b( b );
+            old_b = Some(b);
+        }
+    }
+}
+
 
 
 // We want the low rate scheme given in

@@ -3,6 +3,7 @@ use std::time::Duration;
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use reed_solomon_tester::*;
+use reed_solomon_novelpoly::WrappedShard;
 
 /// Create a new testset for a particular RS encoding.
 macro_rules! instanciate_upper_bound_test {
@@ -18,6 +19,7 @@ macro_rules! instanciate_upper_bound_test {
 			const PAYLOAD_SIZE_CUTOFF: usize = 10_000_000;
 
 			use crate::drop_random_max;
+			use crate::WrappedShard;
 			use criterion::{black_box, Criterion};
 			use rand::{rngs::SmallRng, SeedableRng};
 			use reed_solomon_performance::$mp::{encode, reconstruct};
@@ -25,20 +27,20 @@ macro_rules! instanciate_upper_bound_test {
 
 			#[test]
 			fn criterion_roundtrip_integrity() {
-				roundtrip(encode, reconstruct, black_box(&BYTES[..PAYLOAD_SIZE_CUTOFF]), VALIDATOR_COUNT);
+				roundtrip(encode::<WrappedShard>, reconstruct::<WrappedShard>, black_box(&BYTES[..PAYLOAD_SIZE_CUTOFF]), VALIDATOR_COUNT);
 			}
 
 			pub fn bench_encode(crit: &mut Criterion) {
 				crit.bench_function(concat!($name, " encode upper bound"), |b| {
 					b.iter(|| {
-						let _ = encode(black_box(&BYTES[..PAYLOAD_SIZE_CUTOFF]), VALIDATOR_COUNT);
+						let _ = encode::<WrappedShard>(black_box(&BYTES[..PAYLOAD_SIZE_CUTOFF]), VALIDATOR_COUNT);
 					})
 				});
 			}
 
 			pub fn bench_reconstruct(crit: &mut Criterion) {
 				crit.bench_function(concat!($name, " decode upper bound"), |b| {
-					let encoded = encode(&BYTES[..PAYLOAD_SIZE_CUTOFF], VALIDATOR_COUNT).unwrap();
+					let encoded = encode::<WrappedShard>(&BYTES[..PAYLOAD_SIZE_CUTOFF], VALIDATOR_COUNT).unwrap();
 					let shards = encoded.clone().into_iter().map(Some).collect::<Vec<Option<_>>>();
 
 					let mut rng = SmallRng::from_seed(SMALL_RNG_SEED);
@@ -46,7 +48,7 @@ macro_rules! instanciate_upper_bound_test {
 					b.iter(|| {
 						let mut shards2: Vec<Option<_>> = shards.clone();
 						drop_random_max(&mut shards2[..], VALIDATOR_COUNT, VALIDATOR_COUNT / 3, &mut rng);
-						let _ = reconstruct(black_box(shards2), VALIDATOR_COUNT);
+						let _ = reconstruct::<WrappedShard>(black_box(shards2), VALIDATOR_COUNT);
 					})
 				});
 			}
@@ -66,7 +68,8 @@ pub mod parameterized {
 	use criterion::{black_box, BenchmarkId, Criterion};
 
 	use rand::{rngs::SmallRng, SeedableRng};
-	use reed_solomon_tester::{drop_random_max, BYTES, SMALL_RNG_SEED};
+	use reed_solomon_novelpoly::WrappedShard;
+    use reed_solomon_tester::{drop_random_max, BYTES, SMALL_RNG_SEED};
 	use std::ops::Range;
 
 	const STEPS_VALIDATORS: usize = 4;
@@ -136,7 +139,7 @@ pub mod parameterized {
 				|b, &payload_size| {
 					{
 						b.iter(|| {
-							let _ = reed_solomon_performance::novelpoly::encode(
+							let _ = reed_solomon_performance::novelpoly::encode::<WrappedShard>(
 								black_box(&BYTES[..payload_size]),
 								black_box(validator_count),
 							);
@@ -152,7 +155,7 @@ pub mod parameterized {
 				&payload_size,
 				|b, &payload_size| {
 					b.iter(|| {
-						let _ = reed_solomon_performance::naive::encode(
+						let _ = reed_solomon_performance::naive::encode::<WrappedShard>(
 							black_box(&BYTES[..payload_size]),
 							black_box(validator_count),
 						);
@@ -175,13 +178,13 @@ pub mod parameterized {
 				&payload_size,
 				|b, &payload_size| {
 					let encoded =
-						reed_solomon_performance::novelpoly::encode(&BYTES[..payload_size], validator_count).unwrap();
+						reed_solomon_performance::novelpoly::encode::<WrappedShard>(&BYTES[..payload_size], validator_count).unwrap();
 					let shards = encoded.clone().into_iter().map(Some).collect::<Vec<_>>();
 
 					b.iter(|| {
 						let mut shards2: Vec<Option<_>> = shards.clone();
 						drop_random_max(&mut shards2[..], validator_count, validator_count / 3, rng);
-						let _ = reed_solomon_performance::novelpoly::reconstruct(
+						let _ = reed_solomon_performance::novelpoly::reconstruct::<WrappedShard>(
 							black_box(shards2),
 							black_box(validator_count),
 						);
@@ -197,13 +200,13 @@ pub mod parameterized {
 				&payload_size,
 				|b, &payload_size| {
 					let encoded =
-						reed_solomon_performance::naive::encode(&BYTES[..payload_size], validator_count).unwrap();
+						reed_solomon_performance::naive::encode::<WrappedShard>(&BYTES[..payload_size], validator_count).unwrap();
 					let shards = encoded.clone().into_iter().map(Some).collect::<Vec<_>>();
 
 					b.iter(|| {
 						let mut shards2: Vec<Option<_>> = shards.clone();
 						drop_random_max(&mut shards2[..], validator_count, validator_count / 3, rng);
-						let _ = reed_solomon_performance::naive::reconstruct(
+						let _ = reed_solomon_performance::naive::reconstruct::<WrappedShard>(
 							black_box(shards2),
 							black_box(validator_count),
 						);

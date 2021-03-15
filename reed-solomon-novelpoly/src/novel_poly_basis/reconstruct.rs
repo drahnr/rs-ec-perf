@@ -58,7 +58,7 @@ pub fn reconstruct_sub(
 
 
 /// each shard contains one symbol of one run of erasure coding
-pub fn reconstruct<'a>(received_shards: Vec<Option<WrappedShard>>, validator_count: usize) -> Result<Vec<u8>> {
+pub fn reconstruct<'a, S: Shard>(received_shards: Vec<Option<S>>, validator_count: usize) -> Result<Vec<u8>> {
 	let params = CodeParams::derive_from_validator_count(validator_count)?;
 
 	let rs = params.make_encoder();

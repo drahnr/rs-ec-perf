@@ -7,19 +7,19 @@
 
 use crate::f2e16::*;
 use crate::errors::*;
+use crate::Shard;
 
 
 mod algorithms;
 mod encode;
 mod reconstruct;
 mod util;
-mod wrapped_shard;
 
 pub(crate) use self::algorithms::*;
 pub use self::encode::*;
 pub use self::reconstruct::*;
 pub use self::util::*;
-pub use self::wrapped_shard::*;
+
 
 /// Params for the encoder / decoder
 /// derived from a target validator count.
@@ -83,7 +83,7 @@ impl ReedSolomon {
 		}
 	}
 
-	pub fn encode(&self, bytes: &[u8]) -> Result<Vec<WrappedShard>> {
+	pub fn encode<S: Shard>(&self, bytes: &[u8]) -> Result<Vec<S>> {
 		if bytes.is_empty() {
 			return Err(Error::PayloadSizeIsZero);
 		}
@@ -99,7 +99,7 @@ impl ReedSolomon {
 		let k2 = self.k * 2;
 		// prepare one wrapped shard per validator
 		let mut shards = vec![
-			WrappedShard::new({
+			<S as From<Vec<u8>>>::from({
 				let mut v = Vec::<u8>::with_capacity(shard_len);
 				unsafe { v.set_len(shard_len) }
 				v
@@ -123,7 +123,7 @@ impl ReedSolomon {
 	}
 
 	/// each shard contains one symbol of one run of erasure coding
-	pub fn reconstruct(&self, received_shards: Vec<Option<WrappedShard>>) -> Result<Vec<u8>> {
+	pub fn reconstruct<S: Shard>(&self, received_shards: Vec<Option<S>>) -> Result<Vec<u8>> {
 		let gap = self.n.saturating_sub(received_shards.len());
 
 		// obtain a sample of a shard length and assume that is the truth

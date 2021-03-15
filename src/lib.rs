@@ -9,14 +9,16 @@ pub use reed_solomon_tester::{BYTES, N_SHARDS, TEST_DATA_CHUNK_SIZE};
 #[cfg(test)]
 mod test {
 
-	use super::*;
+	use novelpoly::WrappedShard;
+
+    use super::*;
 
 	#[cfg(feature = "novelpoly")]
 	#[test]
 	fn novelpoly_roundtrip() -> std::result::Result<(), novelpoly::Error> {
 		reed_solomon_tester::roundtrip(
-			novelpoly::encode,
-			novelpoly::reconstruct,
+			novelpoly::encode::<WrappedShard>,
+			novelpoly::reconstruct::<WrappedShard>,
 			&BYTES[..TEST_DATA_CHUNK_SIZE],
 			N_SHARDS,
 		)

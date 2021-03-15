@@ -2,6 +2,7 @@ use rand::prelude::*;
 use rand::seq::index::IndexVec;
 use std::error;
 use std::result;
+use std::iter;
 
 pub static SMALL_RNG_SEED: [u8; 32] = [
 	0, 6, 0xFA, 0, 0x37, 3, 19, 89, 32, 032, 0x37, 0x77, 77, 0b11, 112, 52, 12, 40, 82, 34, 0, 0, 0, 1, 4, 4, 1, 4, 99,
@@ -15,9 +16,6 @@ pub const BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/rand_data.bin
 pub const N_SHARDS: usize = 123;
 /// Shared target number of payload size for simple, quirk turnaround tests:
 pub const TEST_DATA_CHUNK_SIZE: usize = 1337;
-
-/// Alias type for API clarity.
-pub type Shard<'a> = &'a [u8];
 
 /// Assert the byte ranges derived from the index vec are recovered properly
 pub fn assert_recovery(payload: &[u8], reconstructed_payload: &[u8], dropped_indices: IndexVec) {
@@ -105,7 +103,7 @@ where
 	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<S>, E>,
 	Recon: Fn(Vec<Option<S>>, usize) -> result::Result<Vec<u8>, E>,
 	E: error::Error + Send + Sync + 'static,
-	S: AsRef<[u8]> + AsRef<[[u8; 2]]> + Sized + Clone,
+	S: Clone + AsRef<[u8]> + AsMut<[[u8; 2]]> + AsRef<[[u8; 2]]> + iter::FromIterator<[u8; 2]> + From<Vec<u8>>,
 {
 	let v = roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E>(
 		encode,
@@ -126,7 +124,7 @@ pub fn roundtrip_w_drop_closure<'s, Enc, Recon, DropFun, RandGen, S, E>(
 ) -> result::Result<(), E>
 where
 	E: error::Error + Send + Sync + 'static,
-	S: AsRef<[u8]> + AsRef<[[u8; 2]]> + Sized + Clone,
+	S: Clone + AsRef<[u8]> + AsMut<[[u8; 2]]> + AsRef<[[u8; 2]]> + iter::FromIterator<[u8; 2]> + From<Vec<u8>>,
 	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<S>, E>,
 	Recon: Fn(Vec<Option<S>>, usize) -> result::Result<Vec<u8>, E>,
 	DropFun: for<'z> FnMut(&'z mut [Option<S>], usize, usize, &mut RandGen) -> IndexVec,

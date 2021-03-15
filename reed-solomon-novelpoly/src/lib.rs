@@ -6,7 +6,14 @@ pub use errors::*;
 pub mod f2e16;
 
 mod novel_poly_basis;
-pub use novel_poly_basis::*;
+pub use self::novel_poly_basis::*;
+
+pub mod shard;
+pub use self::shard::Shard;
+
+
+pub mod wrapped_shard;
+pub use self::wrapped_shard::WrappedShard;
 
 #[cfg(feature = "with-alt-cxx-impl")]
 pub mod cxx;

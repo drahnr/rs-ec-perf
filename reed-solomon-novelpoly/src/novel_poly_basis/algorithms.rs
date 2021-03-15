@@ -228,6 +228,8 @@ unsafe fn init_dec() {
 }
 
 /// Setup both decoder and encoder.
+///
+/// This will be called
 pub(crate) fn setup() {
 	use std::sync::Once;
 

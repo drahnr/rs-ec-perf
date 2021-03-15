@@ -126,18 +126,6 @@ impl ReedSolomon {
 	pub fn reconstruct<S: Shard>(&self, received_shards: Vec<Option<S>>) -> Result<Vec<u8>> {
 		let gap = self.n.saturating_sub(received_shards.len());
 
-		// obtain a sample of a shard length and assume that is the truth
-		// XXX make sure all shards have equal length
-		let shard_len_in_syms = received_shards
-			.iter()
-			.find_map(|x| {
-				x.as_ref().map(|x| {
-					let x = AsRef::<[[u8; 2]]>::as_ref(x);
-					x.len()
-				})
-			})
-			.unwrap();
-
 		let received_shards =
 			received_shards.into_iter().take(self.n).chain(std::iter::repeat(None).take(gap)).collect::<Vec<_>>();
 
@@ -154,6 +142,19 @@ impl ReedSolomon {
 		if existential_count < self.k {
 			return Err(Error::NeedMoreShards { have: existential_count, min: self.k, all: self.n });
 		}
+
+		// obtain a sample of a shard length and assume that is the truth
+		// XXX make sure all shards have equal length
+		let shard_len_in_syms = received_shards
+			.iter()
+			.find_map(|x| {
+				x.as_ref().map(|x| {
+					let x = AsRef::<[[u8; 2]]>::as_ref(x);
+					x.len()
+				})
+			})
+			.expect("Existential shard count is at least k shards. qed");
+
 
 		// Evaluate error locator polynomial only once
 		let mut error_poly_in_log = [Multiplier(0); FIELD_SIZE];

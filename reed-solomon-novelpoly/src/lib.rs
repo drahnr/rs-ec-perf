@@ -26,11 +26,11 @@ mod test {
 	#[cfg(feature = "naive")]
 	#[test]
 	fn status_quo_roundtrip() -> Result<()> {
-		roundtrip(status_quo::encode, status_quo::reconstruct, &BYTES[..1337], N_SHARDS)
+		roundtrip(status_quo::encode::<WrappedShard>, status_quo::reconstruct::<WrappedShard>, &BYTES[..1337], N_SHARDS)
 	}
 
 	#[test]
 	fn novel_poly_basis_roundtrip() -> Result<()> {
-		roundtrip(novel_poly_basis::encode, novel_poly_basis::reconstruct, &BYTES[..1337], N_SHARDS)
+		roundtrip(novel_poly_basis::encode::<WrappedShard>, novel_poly_basis::reconstruct::<WrappedShard>, &BYTES[..1337], N_SHARDS)
 	}
 }

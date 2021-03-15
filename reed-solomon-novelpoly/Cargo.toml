@@ -24,11 +24,9 @@ itertools = "0.10"
 [dev-dependencies]
 reed-solomon-tester = { path = "../reed-solomon-tester" }
 rand = { version = "0.8", features = ["alloc", "small_rng"] }
-iai = "0.1"
-criterion = "0.3"
-itertools = "0.10"
 assert_matches = "1"
 sha2 = "0.9"
+
 [features]
 default = []
 with-alt-cxx-impl = ["cc", "bindgen"]

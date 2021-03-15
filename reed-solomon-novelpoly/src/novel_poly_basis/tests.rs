@@ -7,6 +7,7 @@ use rand::rngs::SmallRng;
 use rand::seq::index::IndexVec;
 use rand::thread_rng;
 use reed_solomon_tester::*;
+use crate::WrappedShard;
 
 /*
 // If this passes then you do not require the b_not_one feature
@@ -75,10 +76,15 @@ fn base_2_upper_bound() {
 fn k_n_construction() {
 	// skip the two, it's a special case
 	for validator_count in 3_usize..=8200 {
-		let CodeParams { n, k, .. } = CodeParams::derive_from_validator_count(validator_count).unwrap();
-		assert!(validator_count <= n, "vc={} <= n={} violated", validator_count, n);
-		assert!(validator_count / 3 >= k, "vc={} / 3 >= k={} violated", validator_count, k);
-		assert!(validator_count >= k * 3, "vc={} <= k={} *3  violated", validator_count, k);
+		assert_matches! {
+			CodeParams::derive_parameters(validator_count, recoverablity_subset_size(validator_count)),
+			Ok(CodeParams { n, k, wanted_n }) => {
+				assert_eq!(wanted_n, validator_count);
+				assert!(validator_count <= n, "vc={} <= n={} violated", validator_count, n);
+				assert!(validator_count / 3 >= k, "vc={} / 3 >= k={} violated", validator_count, k);
+				assert!(validator_count >= k * 3, "vc={} <= k={} *3  violated", validator_count, k);
+			}
+		}
 	}
 }
 
@@ -140,8 +146,8 @@ fn wrapped_shard_len1_as_gf_sym(w: &WrappedShard) -> Additive {
 
 #[test]
 fn sub_eq_big_for_small_messages() {
-	const N_VALIDATORS: usize = 128;
-	const N: usize = N_VALIDATORS;
+	const N_WANTED_SHARDS: usize = 128;
+	const N: usize = N_WANTED_SHARDS;
 	const K: usize = 32;
 
 	setup();
@@ -149,7 +155,7 @@ fn sub_eq_big_for_small_messages() {
 	const K2: usize = K * 2;
 
 	// assure the derived sizes match
-	let rs = CodeParams::derive_from_validator_count(N_VALIDATORS).unwrap();
+	let rs = CodeParams::derive_parameters(N_WANTED_SHARDS, N_WANTED_SHARDS / 3).unwrap();
 	assert_eq!(rs.n, N);
 	assert_eq!(rs.k, K);
 
@@ -191,7 +197,7 @@ fn sub_eq_big_for_small_messages() {
 
 #[test]
 fn roundtrip_for_large_messages() -> Result<()> {
-	const N_VALIDATORS: usize = 2000;
+	const N_WANTED_SHARDS: usize = 2000;
 	const N: usize = 2048;
 	const K: usize = 512;
 
@@ -200,7 +206,7 @@ fn roundtrip_for_large_messages() -> Result<()> {
 	const K2: usize = K * 2;
 
 	// assure the derived sizes match
-	let rs = CodeParams::derive_from_validator_count(N_VALIDATORS).unwrap();
+	let rs = CodeParams::derive_parameters(N_WANTED_SHARDS, N_WANTED_SHARDS.saturating_sub(1) / 3).expect("Const test parameters are ok. qed");
 	assert_eq!(rs.n, N);
 	assert_eq!(rs.k, K);
 
@@ -212,7 +218,7 @@ fn roundtrip_for_large_messages() -> Result<()> {
 	let payload = &BYTES[0..K2 * shard_length];
 	// let payload = &BYTES[..];
 
-	let mut shards = encode(payload, N_VALIDATORS).unwrap();
+	let mut shards = encode::<WrappedShard>(payload, N_WANTED_SHARDS).expect("Const test parameters are ok. qed");
 
 	// for (idx, shard) in shards.iter().enumerate() {
 	//	let sl = AsRef::<[[u8; 2]]>::as_ref(&shard).len();
@@ -220,7 +226,7 @@ fn roundtrip_for_large_messages() -> Result<()> {
 	// }
 	let (received_shards, dropped_indices) = deterministic_drop_shards_clone(&mut shards, rs.n, rs.k);
 
-	let reconstructed_payload = reconstruct(received_shards, N_VALIDATORS).unwrap();
+	let reconstructed_payload = reconstruct::<WrappedShard>(received_shards, N_WANTED_SHARDS).unwrap();
 
 	assert_recovery(payload, &reconstructed_payload, dropped_indices);
 
@@ -229,7 +235,7 @@ fn roundtrip_for_large_messages() -> Result<()> {
 		encode,
 		reconstruct,
 		payload,
-		N_VALIDATORS,
+		N_WANTED_SHARDS,
 		deterministic_drop_shards,
 	)?;
 
@@ -237,7 +243,7 @@ fn roundtrip_for_large_messages() -> Result<()> {
 		encode,
 		reconstruct,
 		payload,
-		N_VALIDATORS,
+		N_WANTED_SHARDS,
 		drop_random_max,
 	)?;
 
@@ -403,22 +409,23 @@ fn ported_c_test() {
 
 #[test]
 fn test_code_params() {
-	assert_matches!(CodeParams::derive_from_validator_count(0), Err(_));
+	assert_matches!(CodeParams::derive_parameters(0, recoverablity_subset_size(0)), Err(_));
 
-	assert_matches!(CodeParams::derive_from_validator_count(1), Err(_));
+	assert_matches!(CodeParams::derive_parameters(1, recoverablity_subset_size(1)), Err(_));
 
-	assert_eq!(CodeParams::derive_from_validator_count(2), Ok(CodeParams { n: 2, k: 1, validator_count: 2 }));
+	// FIXME this should be cought in the using code
+	// assert_eq!(CodeParams::derive_parameters(2, recoverablity_subset_size(2)), Ok(CodeParams { n: 2, k: 1, wanted_n: 2 }));
 
-	assert_eq!(CodeParams::derive_from_validator_count(3), Ok(CodeParams { n: 4, k: 1, validator_count: 3 }));
+	assert_eq!(CodeParams::derive_parameters(3, recoverablity_subset_size(3)), Ok(CodeParams { n: 4, k: 1, wanted_n: 3 }));
 
-	assert_eq!(CodeParams::derive_from_validator_count(4), Ok(CodeParams { n: 4, k: 1, validator_count: 4 }));
+	assert_eq!(CodeParams::derive_parameters(4, recoverablity_subset_size(4)), Ok(CodeParams { n: 4, k: 1, wanted_n: 4 }));
 
-	assert_eq!(CodeParams::derive_from_validator_count(100), Ok(CodeParams { n: 128, k: 32, validator_count: 100 }));
+	assert_eq!(CodeParams::derive_parameters(100, recoverablity_subset_size(100)), Ok(CodeParams { n: 128, k: 32, wanted_n: 100 }));
 }
 
 #[test]
 fn shard_len_is_reasonable() {
-	let rs = CodeParams { n: 16, k: 4, validator_count: 5 }.make_encoder();
+	let rs = CodeParams { n: 16, k: 4, wanted_n: 5 }.make_encoder();
 
 	// since n must be a power of 2
 	// the chunk sizes becomes slightly larger

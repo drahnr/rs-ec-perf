@@ -32,28 +32,40 @@ pub struct CodeParams {
 	/// Invariant is a power of base 2, `k < n`
 	k: usize,
 	/// Avoid copying unnecessary chunks.
-	validator_count: usize,
+	wanted_n: usize,
 }
 
 impl CodeParams {
 	/// Create a new reed solomon erasure encoding wrapper
-	pub fn derive_from_validator_count(validator_count: usize) -> Result<Self> {
-		if validator_count < 2 {
-			return Err(Error::ValidatorCountTooLow(validator_count));
+	/// `k` the intended number of data shards needed to recover.
+	/// `n` the intended number of resulting shards.
+	///
+	/// Assures that the derived paramters retain at most the given coding
+	/// rate, and as such assure recoverability with at least an equiv fraction
+	/// as provided by the input `n`, and `k` parameterset.
+	pub fn derive_parameters(n: usize, k: usize) -> Result<Self> {
+		if n < 2 {
+			return Err(Error::WantedShardCountTooLow(n));
 		}
-		// we need to be able to reconstruct from 1/3 - eps
-		let k = std::cmp::max(validator_count / 3, 1); // for the odd case of 2 validators
-		let k = next_lower_power_of_2(k);
-		let n = next_higher_power_of_2(validator_count);
-		if n > FIELD_SIZE as usize {
-			return Err(Error::ValidatorCountTooLow(validator_count));
+		if k < 1 {
+			return Err(Error::WantedPayloadShardCountTooLow(k));
 		}
-		Ok(Self { n, k, validator_count })
+		let k_po2 = next_lower_power_of_2(k);
+		let n_po2 = next_higher_power_of_2(n);
+		// If the coding rate of the power of 2 variants, is higher,
+		// we would have to lower k by one order of magnitude base 2
+		// which is true by definition
+		assert!(n * k_po2 <= n_po2 * k);
+
+		if n_po2 > FIELD_SIZE as usize {
+			return Err(Error::WantedShardCountTooHigh(n));
+		}
+		Ok(Self {n: n_po2, k: k_po2, wanted_n: n })
 	}
 
 	// make a reed-solomon instance.
 	pub fn make_encoder(&self) -> ReedSolomon {
-		ReedSolomon::new(self.n, self.k, self.validator_count)
+		ReedSolomon::new(self.n, self.k, self.wanted_n)
 			.expect("this struct is not created with invalid shard number; qed")
 	}
 }
@@ -62,7 +74,7 @@ impl CodeParams {
 pub struct ReedSolomon {
 	n: usize,
 	k: usize,
-	validator_count: usize,
+	wanted_n: usize,
 }
 
 impl ReedSolomon {
@@ -74,12 +86,12 @@ impl ReedSolomon {
 		shard_bytes
 	}
 
-	pub fn new(n: usize, k: usize, validator_count: usize) -> Result<Self> {
+	pub(crate) fn new(n: usize, k: usize, wanted_n: usize) -> Result<Self> {
 		setup();
 		if !is_power_of_2(n) && !is_power_of_2(k) {
 			Err(Error::ParamterMustBePowerOf2 { n, k })
 		} else {
-			Ok(Self { validator_count, n, k })
+			Ok(Self { wanted_n, n, k })
 		}
 	}
 
@@ -95,7 +107,7 @@ impl ReedSolomon {
 		assert!(shard_len > 0);
 		// collect all sub encoding runs
 
-		let validator_count = self.validator_count;
+		let validator_count = self.wanted_n;
 		let k2 = self.k * 2;
 		// prepare one wrapped shard per validator
 		let mut shards = vec![

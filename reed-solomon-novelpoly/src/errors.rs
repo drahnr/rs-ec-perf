@@ -2,11 +2,14 @@
 #[non_exhaustive]
 #[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
 pub enum Error {
-	#[error("Valdiator number {want} exceeds max of {max}")]
-	ValidatorCountTooHigh { want: usize, max: usize },
+	#[error("Number of wanted shards {0} exceeds max of 2^16")]
+	WantedShardCountTooHigh(usize),
 
-	#[error("At least 3 validators required, but have {0}")]
-	ValidatorCountTooLow(usize),
+	#[error("Number of wanted shards must be at least 2, but is {0}")]
+	WantedShardCountTooLow(usize),
+
+	#[error("Number of wanted payload shards must be at least 1, but is {0}")]
+	WantedPayloadShardCountTooLow(usize),
 
 	#[error("Size of the payload is zero")]
 	PayloadSizeIsZero,

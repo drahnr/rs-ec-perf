@@ -49,7 +49,7 @@ pub fn encode_sub(bytes: &[u8], n: usize, k: usize) -> Result<Vec<Additive>> {
 
 
 pub fn encode<S: Shard>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
-	let params = CodeParams::derive_from_validator_count(validator_count)?;
+	let params = CodeParams::derive_parameters(validator_count, recoverablity_subset_size(validator_count))?;
 
 	let rs = params.make_encoder();
 	rs.encode::<S>(bytes)

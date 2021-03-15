@@ -41,7 +41,12 @@ fn main() {
 		// `&[u8]` when possible.
 		// Here, this slice will contain a "random" quantity of "random" data.
 		fuzz!(|feed: Feed| {
-			let _ = rstester::roundtrip(novelpoly::encode::<WrappedShard>, novelpoly::reconstruct::<WrappedShard>, feed.data, *feed.validator_count);
+			let _ = rstester::roundtrip(
+				novelpoly::encode::<WrappedShard>,
+				novelpoly::reconstruct::<WrappedShard>,
+				feed.data,
+				*feed.validator_count,
+			);
 		});
 	}
 }

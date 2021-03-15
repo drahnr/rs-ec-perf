@@ -7,7 +7,7 @@ mod cxx {
 	include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-use crate::{novel_poly_basis::{self, WrappedShard}};
+use crate::novel_poly_basis::WrappedShard;
 
 pub fn setup() {
 	use std::sync::Once;
@@ -19,12 +19,12 @@ pub fn setup() {
 	});
 }
 
-pub fn encode(bytes: &[u8]) -> Vec<WrappedShard> {
+pub fn encode(_bytes: &[u8]) -> Vec<WrappedShard> {
 	setup();
 	unimplemented!("encode for C for usage in rs bench is not implemented")
 }
 
-pub fn reconstruct(received_shards: Vec<Option<WrappedShard>>) -> Option<Vec<u8>> {
+pub fn reconstruct(_received_shards: Vec<Option<WrappedShard>>) -> Option<Vec<u8>> {
 	setup();
 	unimplemented!("reconstruction for C for usage in rs bench is not implemented")
 }

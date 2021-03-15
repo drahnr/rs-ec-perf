@@ -1,5 +1,3 @@
-use super::*;
-
 use std::result;
 
 mod wrapped_shard;

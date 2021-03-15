@@ -3,8 +3,8 @@ use std::env;
 use std::io::{Result, Write};
 use std::path::PathBuf;
 
-use fs_err::OpenOptions;
-use rand::{self, distributions::Uniform, prelude::Distribution};
+use fs_err as fs;
+use fs::OpenOptions;
 
 include!("src/f2e16.rs");
 

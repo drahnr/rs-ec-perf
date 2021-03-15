@@ -1,3 +1,5 @@
+#![forbid(unused_crate_dependencies)]
+
 pub mod errors;
 pub use errors::*;
 

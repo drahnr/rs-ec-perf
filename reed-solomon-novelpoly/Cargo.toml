@@ -10,7 +10,6 @@ keywords = ["reed-solomon", "erasure", "encoding", "algorithm"]
 
 [build-dependencies]
 derive_more = { version = "0.99.0", default-features = false, features = ["add_assign", "add"] }
-rand = { version = "0.8", features = ["alloc", "small_rng"] }
 fs-err = "2"
 bindgen = { version = "0.57", optional = true }
 cc = { version = "1.0", features = ["parallel"], optional = true }

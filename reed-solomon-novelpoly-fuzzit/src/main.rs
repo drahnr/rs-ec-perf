@@ -20,7 +20,7 @@ impl<'a> Arbitrary<'a> for ValidatorCount {
 		if data > 2200 {
 			Err(arbitrary::Error::IncorrectFormat)
 		} else {
-			Ok(Self(data as usize))
+			Ok(Self(data.cast_as()))
 		}
 	}
 }

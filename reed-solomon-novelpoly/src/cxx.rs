@@ -40,8 +40,8 @@ mod tests {
 
 	#[test]
 	fn konst() {
-		assert_eq!(cxx::FIELD_SIZE as usize, crate::f2e16::FIELD_SIZE);
-		assert_eq!(cxx::FIELD_BITS as usize, crate::f2e16::FIELD_BITS);
+		assert_eq!(cxx::FIELD_SIZE.cast_as(), crate::f2e16::FIELD_SIZE);
+		assert_eq!(cxx::FIELD_BITS.cast_as(), crate::f2e16::FIELD_BITS);
 		assert_eq!(cxx::MODULO as u16, crate::f2e16::MODULO);
 		itertools::assert_equal(unsafe { &cxx::Base }.iter(), crate::f2e16::BASE.iter());
 	}

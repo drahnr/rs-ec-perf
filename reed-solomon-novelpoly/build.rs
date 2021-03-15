@@ -6,13 +6,31 @@ use std::fmt;
 
 use fs_err as fs;
 use fs::OpenOptions;
-include!("src/f2e16.rs");
+
+mod ops {
+	include!("src/field/ops.rs");
+}
+
+use self::ops::Multiplier;
+
+include!("src/field/field.rs");
+
+// One level indentation required for `super::Field as FieldTrait`.
+mod f2e16 {
+    use super::write_const;
+    include!("src/field/f2e16.rs");
+}
+
+// mod f256 {
+//     use super::write_const;
+//     include!("src/f256.rs");
+// }
 
 /// Write Rust `const` declaration
-pub fn write_const<W, T>(mut w: W, name: &str, value: &T, type_name: &str) -> io::Result<()>
+pub fn write_const<W, T>(mut w: W, name: &str, value: &T, type_name: String) -> io::Result<()>
 where
 	W: io::Write,
-	T: fmt::Debug,
+	T: fmt::Debug + ?Sized,
 {
 	write!(w, "pub(crate) static {}: {} = {:#?};\n\n", name, type_name, value)
 }
@@ -24,49 +42,50 @@ where
 /// the Walsh transform table `LOG_WALSH` here too because we never figured
 /// out how to shrink `LOG_WALSH` below the size of the full field (TODO).
 /// We thus assume it depends only upon the field for now.
-#[allow(dead_code)]
-fn write_field_tables<W: io::Write>(mut w: W) -> io::Result<()> {
-	let mut log_table: [Elt; FIELD_SIZE] = [0_u16; FIELD_SIZE];
-	let mut exp_table: [Elt; FIELD_SIZE] = [0_u16; FIELD_SIZE];
+fn write_field_tables<F: FieldT, W: io::Write>(mut w: W) -> io::Result<()>
+where <F as FieldT>::Element: Debug
+{
+	let mut log_table: Vec<F::Element> = vec![0.cast_as() as F::Element; F::FIELD_SIZE];
+	let mut exp_table: Vec<F::Element> = vec![0.cast_as() as F::Element; F::FIELD_SIZE];
 
-	let mas: Elt = (1 << FIELD_BITS - 1) - 1;
+	let mas = ((1_usize << F::FIELD_BITS - 1) - 1).cast_as() as F::Element;
 	let mut state: usize = 1;
-	for i in 0_usize..(ONEMASK as usize) {
-		exp_table[state] = i as Elt;
-		if (state >> FIELD_BITS - 1) != 0 {
-			state &= mas as usize;
-			state = state << 1_usize ^ GENERATOR as usize;
+	for i in 0_usize..F::ONEMASK.cast_as() as usize {
+		exp_table[state] = 0.cast_as() as F::Element;
+		if (state >> F::FIELD_BITS - 1) != 0 {
+			state &= mas.cast_as() as usize;
+			state = state << 1_usize ^ F::GENERATOR.cast_as() as usize;
 		} else {
 			state <<= 1;
 		}
 	}
-	exp_table[0] = ONEMASK;
+	exp_table[0] = F::ONEMASK;
 
-	log_table[0] = 0;
-	for i in 0..FIELD_BITS {
+	log_table[0] = 0.cast_as() as F::Element;
+	for i in 0..F::FIELD_BITS {
 		for j in 0..(1 << i) {
-			log_table[j + (1 << i)] = log_table[j] ^ BASE[i];
+			log_table[j + (1 << i)] = log_table[j] ^ F::BASE[i] as F::Element;
 		}
 	}
-	for i in 0..FIELD_SIZE {
-		log_table[i] = exp_table[log_table[i] as usize];
+	for i in 0..F::FIELD_SIZE {
+		log_table[i] = exp_table[usize::cast_from(log_table[i])];
 	}
 
-	for i in 0..FIELD_SIZE {
-		exp_table[log_table[i] as usize] = i as Elt;
+	for i in 0..F::FIELD_SIZE {
+		exp_table[usize::cast_from(log_table[i])] = F::Element::cast_from(i);
 	}
-	exp_table[ONEMASK as usize] = exp_table[0];
+	exp_table[usize::cast_from(F::ONEMASK)] = exp_table[0];
 
-	write_const(&mut w, "LOG_TABLE", &log_table, "[u16; FIELD_SIZE]")?;
-	write_const(&mut w, "EXP_TABLE", &exp_table, "[u16; FIELD_SIZE]")?;
+	write_const(&mut w, "LOG_TABLE", &log_table, format!("[{}; FIELD_SIZE]", std::any::type_name::<F::Element>()))?;
+	write_const(&mut w, "EXP_TABLE", &exp_table, format!("[{}; FIELD_SIZE]", std::any::type_name::<F::Element>()))?;
 
-	// mem_cpy(&mut log_walsh[..], &log_table[..]);
-	let log_walsh = log_table.clone();
-	let mut log_walsh = unsafe { core::mem::transmute::<_, [Multiplier; FIELD_SIZE]>(log_walsh) };
-	log_walsh[0] = Multiplier(0);
-	walsh(&mut log_walsh[..], FIELD_SIZE);
+	let mut log_walsh = log_table.into_iter()
+		.map(|x| Multiplier::<F>(x)).collect::<Vec<_>>();
+	assert_eq!(log_walsh.len(), F::FIELD_SIZE);
 
-	write_const(w, "LOG_WALSH", &log_walsh, "[Multiplier; FIELD_SIZE]")?;
+	ops::walsh::<F>(&mut log_walsh[..], F::FIELD_SIZE);
+
+	write_const(w, "LOG_WALSH", &log_walsh[..], format!("[{}; FIELD_SIZE]", std::any::type_name::<Multiplier<F>>()))?;
 	Ok(())
 }
 
@@ -76,7 +95,7 @@ fn write_field_tables<W: io::Write>(mut w: W) -> io::Result<()> {
 /// dislikes build artifacts appearing outside env!("OUT_DIR") and we
 /// require tables to build other tables.
 /// ref.  https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
-pub fn gen_field_tables() -> io::Result<()> {
+pub fn gen_field_tables<F: FieldT>() -> io::Result<()> {
 	// to avoid a circular loop, we need to import a dummy
 	// table, such that we do not depend on the thing we are
 	// about to spawn
@@ -84,9 +103,9 @@ pub fn gen_field_tables() -> io::Result<()> {
 
 	let out = env::var("OUT_DIR").expect("OUT_DIR is set by cargo after process launch. qed");
 
-	let path = PathBuf::from(out).join(format!("table_{}.rs", "f2e16"));
+	let path = PathBuf::from(out).join(format!("table_{}.rs", F::NAME));
 	let f = OpenOptions::new().create(true).truncate(true).write(true).open(path)?;
-	write_field_tables(f)?;
+	write_field_tables::<F>(f)?;
 
 	Ok(())
 }
@@ -114,7 +133,8 @@ fn gen_ffi_novel_poly_basis_bindgen() {
 }
 
 fn main() -> io::Result<()> {
-	gen_field_tables()?;
+	gen_field_tables::<f2e16::Field>()?;
+	// gen_field_tables::<f2e8::Field>()?;
 
 	#[cfg(feature = "with-alt-cxx-impl")]
 	{

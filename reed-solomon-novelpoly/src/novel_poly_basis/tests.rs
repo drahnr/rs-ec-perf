@@ -81,7 +81,7 @@ fn flt_back_and_forth() {
 
 #[test]
 fn sub_encode_decode() -> Result<()> {
-	let mut rng = rand::thread_rng();
+	let mut rng = rand::rngs::SmallRng::from_seed(SMALL_RNG_SEED);
 
 	const N: usize = 32;
 	const K: usize = 4;
@@ -264,7 +264,7 @@ fn flt_roundtrip_small() {
 
 	let mut data = EXPECTED.clone();
 
-	afft(&mut data, N, N / 4);
+	f2e16::afft(&mut data, N, N / 4);
 
 	println!("novel basis(rust):");
 	data.iter().for_each(|sym| {
@@ -272,7 +272,7 @@ fn flt_roundtrip_small() {
 	});
 	println!("");
 
-	inverse_afft(&mut data, N, N / 4);
+	f2e16::inverse_afft(&mut data, N, N / 4);
 	itertools::assert_equal(data.iter(), EXPECTED.iter());
 }
 
@@ -304,9 +304,9 @@ fn ported_c_test() {
 
 	if K + K > N && false {
 		let (data_till_t, data_skip_t) = data.split_at_mut(N - K);
-		encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
+		f2e16::encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
 	} else {
-		encode_low(&data[..], K, &mut codeword[..], N);
+		f2e16::encode_low(&data[..], K, &mut codeword[..], N);
 	}
 
 	// println!("Codeword:");

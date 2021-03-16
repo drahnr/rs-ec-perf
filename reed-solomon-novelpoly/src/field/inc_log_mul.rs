@@ -87,7 +87,7 @@ pub fn walsh(data: &mut [Multiplier], size: usize) {
 }
 
 
-fn bitpoly_mul16(mut a: Wide, mut b: Wide) -> Wide {
+fn bitpoly_mul16(a: Wide, b: Wide) -> Wide {
     let mut r: Wide =0;
     for i in 0..FIELD_BITS {
         if (b>>i) & 1 != 0 {
@@ -97,12 +97,15 @@ fn bitpoly_mul16(mut a: Wide, mut b: Wide) -> Wide {
     r
 }
 
-fn gf_mul_bitpoly_reduced(mut a: Elt, mut b: Elt) -> Elt {
+fn gf_mul_bitpoly_reduced(a: Elt, b: Elt) -> Elt {
+    use core::convert::TryInto;
     let len = FIELD_BITS;
     let mut r: Wide = bitpoly_mul16(a as Wide,b as Wide);
     let red : Wide = (1 << FIELD_BITS) + (GENERATOR as Wide);
     for i in (len..=(len*2-1)).rev() {
-        if r & (1<<i) != 0 { r ^= (red<<(i-len)); }
+        if r & (1<<i) != 0 {
+			r ^= red<<(i-len);
+		}
     }
     r.try_into().unwrap()
 }

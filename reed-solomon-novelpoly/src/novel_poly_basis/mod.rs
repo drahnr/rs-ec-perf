@@ -16,7 +16,7 @@ pub use self::encode::*;
 pub use self::reconstruct::*;
 pub use super::util::*;
 
-use super::field::f2e16::*;
+use super::field::f2e16;
 
 /// Params for the encoder / decoder
 /// derived from a target validator count.
@@ -120,7 +120,7 @@ impl ReedSolomon {
 			let data_piece = &bytes[i..end];
 			assert!(!data_piece.is_empty());
 			assert!(data_piece.len() <= k2);
-			let encoding_run = encode_sub(data_piece, self.n, self.k)?;
+			let encoding_run = f2e16::encode_sub(data_piece, self.n, self.k)?;
 			for val_idx in 0..validator_count {
 				AsMut::<[[u8; 2]]>::as_mut(&mut shards[val_idx])[chunk_idx] = encoding_run[val_idx].0.to_be_bytes();
 			}
@@ -164,7 +164,7 @@ impl ReedSolomon {
 
 		// Evaluate error locator polynomial only once
 		let mut error_poly_in_log = [Multiplier(0); FIELD_SIZE];
-		eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
+		f2e16::eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
 
 		let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);
 		for i in 0..shard_len_in_syms {
@@ -182,7 +182,8 @@ impl ReedSolomon {
 			assert_eq!(decoding_run.len(), self.n);
 
 			// reconstruct from one set of symbols which was spread over all erasure chunks
-			let piece = reconstruct_sub(&decoding_run[..], &erasures, self.n, self.k, &error_poly_in_log).unwrap();
+			let piece =
+				f2e16::reconstruct_sub(&decoding_run[..], &erasures, self.n, self.k, &error_poly_in_log).unwrap();
 			acc.extend_from_slice(&piece[..]);
 		}
 

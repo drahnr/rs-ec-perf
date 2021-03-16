@@ -21,7 +21,7 @@ mod f256 {
 
 #[cfg(feature = "with-alt-cxx-impl")]
 fn gen_ffi_novel_poly_basis_lib() {
-	cc::Build::new().file("cxx/RSErasureCode.c").file("cxx/sha-256.c").include("cxx").compile("novelpolycxxffi");
+	cc::Build::new().file("cxx/RSErasureCode.c").include("cxx").compile("novelpolycxxffi");
 }
 
 #[cfg(feature = "with-alt-cxx-impl")]

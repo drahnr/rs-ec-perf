@@ -17,7 +17,7 @@ pub fn walsh<F: FieldT>(data: &mut [F::Multiplier], size: usize) {
 				let tmp1: F::Wide = data[i].to_wide() + data[i + depart_no].to_wide();
 				let field_bits = <F::Wide as Castomat<usize>>::from(F::FIELD_BITS);
 				data[i] = F::Multiplier::from((tmp1 & mask) + (tmp1 >> field_bits));
-				data[i + depart_no] = F::Multiplier::from(((tmp2 & mask) + (tmp2 >> field_bits)));
+				data[i + depart_no] = F::Multiplier::from((tmp2 & mask) + (tmp2 >> field_bits));
 			}
 			j += depart_no_next;
 		}

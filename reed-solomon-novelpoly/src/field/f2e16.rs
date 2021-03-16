@@ -1,4 +1,6 @@
 
+
+
 // Do not change. Must stay as is for buid script.
 use super::FieldT;
 use super::AdditiveT;
@@ -79,7 +81,7 @@ impl AdditiveT<Field> for Additive {
 			return Self::ZERO;
 		}
 		let log = LOG_TABLE[self.0 as usize] as u32 + other.0;
-		let offset = (log & ONEMASK) as u32 + (log >> FIELD_BITS);
+		let offset = (log & Self::ONEMASK) as u32 + (log >> Self::FIELD_BITS);
 		Additive(EXP_TABLE[offset as usize])
 	}
 
@@ -131,3 +133,6 @@ impl MultiplierT<Field> for Multiplier {
 		self.0 as usize
 	}
 }
+
+
+import_table!("f2e16", Field);

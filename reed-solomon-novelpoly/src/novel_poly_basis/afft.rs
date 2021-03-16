@@ -3,7 +3,7 @@ use crate::field::{FieldT, Castomat, MultiplierT, AdditiveT};
 use static_init::dynamic;
 
 #[dynamic(0)]
-pub(crate) static AFFT: AdditiveFFT<super::field::f2e16::Field> = AdditiveFFT::<super::field::f2e16::Field>::initalize();
+pub(crate) static AFFT: AdditiveFFT<crate::field::f2e16::Field> = AdditiveFFT::<crate::field::f2e16::Field>::initalize();
 
 
 /// Additive FFT and inverse in the "novel polynomial basis"
@@ -50,7 +50,7 @@ pub(crate) fn afft<F: FieldT>(data: &mut [F::Additive], size: usize, index: usiz
 }
 
 
-impl<F: Field> AdditiveFFT<F> {
+impl<F: Field<Element=u16, Wide=u32>> AdditiveFFT<F> {
 
     /// Inverse additive FFT in the "novel polynomial basis"
     pub(crate) fn inverse_afft(&self, data: &mut [F::Additive], size: usize, index: usize) {
@@ -174,7 +174,7 @@ impl<F: Field> AdditiveFFT<F> {
         // representation, or mybe something else entirely.  (TODO)
     	let mut base: [F::Element; F::FIELD_BITS - 1] = Default::default();
 
-		let additive_zero = <F::Additive as Customat<usize>>::from(0_usize);
+		let additive_zero = <F::Additive as Castomat<usize>>::from(0_usize);
         let mut skews_additive = [additive_zero; F::ONEMASK.cast_as()];
 
     	for i in 1..F::FIELD_BITS {
@@ -224,9 +224,8 @@ impl<F: Field> AdditiveFFT<F> {
     	}
 
     	// Convert skew factors from Additive to Multiplier form
-		let one_mask: usize = F::ONEMASK.cast_as();
-        let mut skews_multiplier = [F::Multiplier::from(0_usize); one_mask];
-    	for i in 0..one_mask {
+        let mut skews_multiplier = [F::Multiplier::from(0_usize); F::ONEMASK as usize];
+    	for i in 0_usize..F::ONEMASK as usize {
     		// SKEW_FACTOR[i] = LOG_TABLE[SKEW_FACTOR[i].cast_as()];
     		skews_multiplier[i] = skews_additive[i].to_multiplier();
     	}

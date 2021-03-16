@@ -8,7 +8,9 @@ use fs_err as fs;
 use fs::OpenOptions;
 
 pub mod field {
-	include!("src/field/field.rs");
+	include!("src/field/tabular.rs");
+
+	include!("src/field/gf.rs");
 	pub mod f2e16 {
 		use super::*;
 		include!("src/field/f2e16.rs");
@@ -84,8 +86,8 @@ where <F as FieldT>::Element: fmt::Debug
 	}
 	exp_table[Castomat::<usize>::cast_as(F::ONEMASK)] = exp_table[0];
 
-	write_const(&mut w, "LOG_TABLE", &log_table, format!("[{}; FIELD_SIZE]", std::any::type_name::<F::Element>()))?;
-	write_const(&mut w, "EXP_TABLE", &exp_table, format!("[{}; FIELD_SIZE]", std::any::type_name::<F::Element>()))?;
+	write_const(&mut w, "LOG_TABLE", &log_table, format!("[Field::Element; FIELD_SIZE]"))?;
+	write_const(&mut w, "EXP_TABLE", &exp_table, format!("[Field::Element; FIELD_SIZE]"))?;
 
 	let mut log_walsh = log_table.into_iter()
 		.map(|x| F::Multiplier::from(x)).collect::<Vec<_>>();
@@ -93,7 +95,7 @@ where <F as FieldT>::Element: fmt::Debug
 
 	ops::walsh::<F>(&mut log_walsh[..], F::FIELD_SIZE);
 
-	write_const(w, "LOG_WALSH", &log_walsh[..], format!("[{}; FIELD_SIZE]", std::any::type_name::<F::Multiplier>()))?;
+	write_const(w, "LOG_WALSH", &log_walsh[..], format!("[Field::Multiplier; FIELD_SIZE]"))?;
 	Ok(())
 }
 
@@ -104,6 +106,7 @@ where <F as FieldT>::Element: fmt::Debug
 /// require tables to build other tables.
 /// ref.  https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 pub fn gen_field_tables<F: FieldT>() -> io::Result<()> {
+
 	// to avoid a circular loop, we need to import a dummy
 	// table, such that we do not depend on the thing we are
 	// about to spawn
@@ -112,7 +115,12 @@ pub fn gen_field_tables<F: FieldT>() -> io::Result<()> {
 	let out = env::var("OUT_DIR").expect("OUT_DIR is set by cargo after process launch. qed");
 
 	let path = PathBuf::from(out).join(format!("table_{}.rs", F::NAME));
-	let f = OpenOptions::new().create(true).truncate(true).write(true).open(path)?;
+	let mut f = OpenOptions::new().create(true).truncate(true).write(true).open(path)?;
+
+	use io::Write;
+
+	writeln!(&mut f, "use crate::field::{}::Multiplier;", F::NAME)?;
+	writeln!(&mut f, "use crate::field::{}::Additive;", F::NAME)?;
 	write_field_tables::<F,_>(f)?;
 
 	Ok(())

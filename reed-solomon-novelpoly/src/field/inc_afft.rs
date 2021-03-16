@@ -58,7 +58,7 @@ pub fn tweaked_formal_derivative(codeword: &mut [Additive], n: usize) {
 }
 
 /// This test ensure that b can safely be bypassed in tweaked_formal_derivative
-#[cfg(not(b_is_not_one))]
+#[cfg(b_is_not_one)]
 #[test]
 fn b_is_one() {
     let B = unsafe { &AFFT.B };
@@ -311,7 +311,6 @@ impl AdditiveFFT {
     }
 
 }
-
 
 #[cfg(b_is_not_one)]
 #[test]

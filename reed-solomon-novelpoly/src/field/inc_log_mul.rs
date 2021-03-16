@@ -1,5 +1,4 @@
 use derive_more::{Add, AddAssign, BitXor, BitXorAssign, Sub, SubAssign};
-use core::convert::TryInto;
 
 /// Additive via XOR form of f2e16
 #[derive(Clone, Copy, Debug, Default, BitXor, BitXorAssign, PartialEq, Eq)] // PartialOrd,Ord
@@ -86,7 +85,7 @@ pub fn walsh(data: &mut [Multiplier], size: usize) {
 	}
 }
 
-
+#[allow(unused)]
 fn bitpoly_mul16(a: Wide, b: Wide) -> Wide {
     let mut r: Wide =0;
     for i in 0..FIELD_BITS {
@@ -97,6 +96,7 @@ fn bitpoly_mul16(a: Wide, b: Wide) -> Wide {
     r
 }
 
+#[allow(unused)]
 fn gf_mul_bitpoly_reduced(a: Elt, b: Elt) -> Elt {
     use core::convert::TryInto;
     let len = FIELD_BITS;

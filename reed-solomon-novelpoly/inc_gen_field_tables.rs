@@ -10,7 +10,8 @@ where
 	W: io::Write,
 	T: fmt::Debug,
 {
-	write!(w, "pub(crate) static {}: {} = {:#?};\n\n", name, type_name, value)
+	writeln!(w, r###"#[allow(unused)]
+pub(crate) static {}: {} = {:#?};"###, name, type_name, value)
 }
 
 /// Compute tables determined solely by the field, which never depend

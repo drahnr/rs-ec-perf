@@ -1,10 +1,4 @@
-use std::env;
-
-use std::fmt;
 use std::io;
-use std::path::PathBuf;
-
-use fs_err as fs;
 
 include!("src/util.rs");
 include!("src/field/gen.rs");
@@ -26,6 +20,9 @@ fn gen_ffi_novel_poly_basis_lib() {
 
 #[cfg(feature = "with-alt-cxx-impl")]
 fn gen_ffi_novel_poly_basis_bindgen() {
+	use std::env;
+	use std::path::PathBuf;
+
 	println!("cargo:rustc-link-lib=novelpolycxxffi");
 
 	println!("cargo:rerun-if-changed=wrapper.h");

@@ -2,11 +2,11 @@
 name = "reed-solomon-novelpoly"
 version = "0.0.1"
 authors = ["Parity Technologies <admin@parity.io>"]
+repository = "https://github.com/paritytech/reed-solomon-novelpoly"
 edition = "2018"
 license = "Apache-2.0 AND MIT"
 description = "An implementation of a reed solomon code / encoder / decoder with complexity `O(n lg(n))`"
 keywords = ["reed-solomon", "erasure", "encoding", "algorithm"]
-
 
 [build-dependencies]
 derive_more = { version = "0.99.0", default-features = false, features = ["add_assign", "add"] }

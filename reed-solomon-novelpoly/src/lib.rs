@@ -3,7 +3,10 @@
 pub mod errors;
 pub use errors::*;
 
-pub mod f2e16;
+
+pub mod field;
+pub use self::field::f2e16;
+pub use self::field::f256;
 
 mod novel_poly_basis;
 pub use self::novel_poly_basis::*;

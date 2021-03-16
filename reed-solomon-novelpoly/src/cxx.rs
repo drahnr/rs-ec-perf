@@ -9,7 +9,7 @@ mod cxx {
 
 use crate::Shard;
 
-pub fn setup() {
+fn setup() {
 	use std::sync::Once;
 
 	static SETUP: Once = Once::new();

@@ -95,12 +95,12 @@ fn flt_back_and_forth() {
 	let mut data = (0..N).into_iter().map(|_x| rand_gf_element()).collect::<Vec<Additive>>();
 	let expected = data.clone();
 
-	afft_in_novel_poly_basis(&mut data, N, N / 4);
+	afft(&mut data, N, N / 4);
 
 	// make sure something is done
 	assert!(data.iter().zip(expected.iter()).filter(|(a, b)| { a != b }).count() > 0);
 
-	inverse_afft_in_novel_poly_basis(&mut data, N, N / 4);
+	inverse_afft(&mut data, N, N / 4);
 
 	itertools::assert_equal(data, expected);
 }
@@ -294,7 +294,7 @@ fn flt_roundtrip_small() {
 
 	let mut data = EXPECTED.clone();
 
-	afft_in_novel_poly_basis(&mut data, N, N / 4);
+	afft(&mut data, N, N / 4);
 
 	println!("novel basis(rust):");
 	data.iter().for_each(|sym| {
@@ -302,7 +302,7 @@ fn flt_roundtrip_small() {
 	});
 	println!("");
 
-	inverse_afft_in_novel_poly_basis(&mut data, N, N / 4);
+	inverse_afft(&mut data, N, N / 4);
 	itertools::assert_equal(data.iter(), EXPECTED.iter());
 }
 

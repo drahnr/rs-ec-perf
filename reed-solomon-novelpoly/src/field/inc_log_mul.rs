@@ -1,52 +1,46 @@
+
+
 use derive_more::{Add, AddAssign, BitXor, BitXorAssign, Sub, SubAssign};
 
-#[cfg(not(table_bootstrap_complete))]
-pub(crate) const LOG_TABLE: [u16; FIELD_SIZE] = [0; FIELD_SIZE];
-// #[cfg(not(table_bootstrap_complete))]
-// pub(crate) const LOG_WALSH: [u16; FIELD_SIZE] = [0; FIELD_SIZE];
-#[cfg(not(table_bootstrap_complete))]
-pub(crate) const EXP_TABLE: [u16; FIELD_SIZE] = [0; FIELD_SIZE];
 
-// must be placed in a separate file, such that the preproc never tries to eval OUT_DIR
-// in env which does not exist in the build.rs case
-#[cfg(table_bootstrap_complete)]
-include!(concat!(env!("OUT_DIR"), "/table_f2e16.rs"));
-
-pub type Elt = u16;
-pub type Wide = u32;
-
-pub const FIELD_BITS: usize = 16;
-pub const FIELD_SIZE: usize = 1_usize << FIELD_BITS;
-
+/// Additive via XOR form of f2e16
 #[derive(Clone, Copy, Debug, Default, BitXor, BitXorAssign, PartialEq, Eq)] // PartialOrd,Ord
 pub struct Additive(pub Elt);
+
 impl Additive {
+    #[inline(always)]
 	pub fn to_wide(self) -> Wide {
 		self.0 as Wide
 	}
+    #[inline(always)]
 	pub fn from_wide(x: Wide) -> Additive {
 		Additive(x as Elt)
 	}
 
-	pub const ZERO: Additive = Additive(0u16);
-	// pub const ONE: Additive = Additive(???);
+	pub const ZERO: Additive = Additive(0);
+}
 
+#[cfg(table_bootstrap_complete)]
+impl Additive {
 	/// Return multiplier prepared form
+    #[inline(always)]
 	pub fn to_multiplier(self) -> Multiplier {
 		Multiplier(LOG_TABLE[self.0 as usize])
 	}
 
 	/// Return a*EXP_TABLE[b] over GF(2^r)
+    #[inline(always)]
 	pub fn mul(self, other: Multiplier) -> Additive {
 		if self == Self::ZERO {
 			return Self::ZERO;
 		}
-		let log = (LOG_TABLE[self.0 as usize] as u32) + other.0 as u32;
-		let offset = (log & ONEMASK as u32) + (log >> FIELD_BITS);
+		let log = (LOG_TABLE[self.0 as usize] as Wide) + other.0 as Wide;
+		let offset = (log & ONEMASK as Wide) + (log >> FIELD_BITS);
 		Additive(EXP_TABLE[offset as usize])
 	}
 
 	/// Multiply field elements by a single multiplier, using SIMD if available
+    #[inline(always)]
 	pub fn mul_assign_slice(selfy: &mut [Self], other: Multiplier) {
 		// TODO: SIMD
 		for s in selfy {
@@ -55,16 +49,22 @@ impl Additive {
 	}
 }
 
+
+/// Multiplicaiton friendly LOG form of f2e16
 #[derive(Clone, Copy, Debug, Add, AddAssign, Sub, SubAssign, PartialEq, Eq)] // Default, PartialOrd,Ord
-pub struct Multiplier(pub u16);
+pub struct Multiplier(pub Elt);
+
 impl Multiplier {
-	pub fn to_wide(self) -> u32 {
-		self.0 as u32
+    #[inline(always)]
+	pub fn to_wide(self) -> Wide {
+		self.0 as Wide
 	}
-	pub fn from_wide(x: u32) -> Multiplier {
-		Multiplier(x as u16)
+    #[inline(always)]
+	pub fn from_wide(x: Wide) -> Multiplier {
+		Multiplier(x as Elt)
 	}
 }
+
 
 /// Fast Walsh–Hadamard transform over modulo ONEMASK
 pub fn walsh(data: &mut [Multiplier], size: usize) {
@@ -88,14 +88,3 @@ pub fn walsh(data: &mut [Multiplier], size: usize) {
 		depart_no = depart_no_next;
 	}
 }
-
-/* Needs Cleanup  */
-
-pub const ONEMASK: Elt = (FIELD_SIZE - 1) as Elt;
-
-/// Quotient ideal generator given by tail of irreducible polynomial
-pub const GENERATOR: Elt = 0x2D; // x^16 + x^5 + x^3 + x^2 + 1
-
-// Cantor basis
-pub const BASE: [Elt; FIELD_BITS] =
-	[1_u16, 44234, 15374, 5694, 50562, 60718, 37196, 16402, 27800, 4312, 27250, 47360, 64952, 64308, 65336, 39198];

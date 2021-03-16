@@ -35,7 +35,7 @@ pub(crate) fn formal_derivative(cos: &mut [Additive], size: usize) {
 // We're hunting for the differences and trying to undersrtand the algorithm.
 
 //IFFT in the proposed basis
-pub(crate) fn inverse_afft_in_novel_poly_basis(data: &mut [Additive], size: usize, index: usize) {
+pub(crate) fn inverse_afft(data: &mut [Additive], size: usize, index: usize) {
 	// All line references to Algorithm 2 page 6288 of
 	// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
 
@@ -90,7 +90,7 @@ pub(crate) fn inverse_afft_in_novel_poly_basis(data: &mut [Additive], size: usiz
 }
 
 //FFT in the proposed basis
-pub(crate) fn afft_in_novel_poly_basis(data: &mut [Additive], size: usize, index: usize) {
+pub(crate) fn afft(data: &mut [Additive], size: usize, index: usize) {
 	// All line references to Algorithm 1 page 6287 of
 	// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
 
@@ -258,7 +258,7 @@ pub(crate) fn encode_low(data: &[Additive], k: usize, codeword: &mut [Additive],
 	// split after the first k
 	let (codeword_first_k, codeword_skip_first_k) = codeword.split_at_mut(k);
 
-	inverse_afft_in_novel_poly_basis(codeword_first_k, k, 0);
+	inverse_afft(codeword_first_k, k, 0);
 
 	// the first codeword is now the basis for the remaining transforms
 	// denoted `M_topdash`
@@ -267,7 +267,7 @@ pub(crate) fn encode_low(data: &[Additive], k: usize, codeword: &mut [Additive],
 		let codeword_at_shift = &mut codeword_skip_first_k[(shift - k)..shift];
 		// copy `M_topdash` to the position we are currently at, the n transform
 		mem_cpy(codeword_at_shift, codeword_first_k);
-		afft_in_novel_poly_basis(codeword_at_shift, k, shift);
+		afft(codeword_at_shift, k, shift);
 	}
 
 	// restore `M` from the derived ones
@@ -296,13 +296,13 @@ pub(crate) fn encode_high(data: &[Additive], k: usize, parity: &mut [Additive], 
 	while i < n {
 		mem_cpy(&mut mem[..t], &data[(i - t)..t]);
 
-		inverse_afft_in_novel_poly_basis(mem, t, i);
+		inverse_afft(mem, t, i);
 		for j in 0..t {
 			parity[j] ^= mem[j];
 		}
 		i += t;
 	}
-	afft_in_novel_poly_basis(parity, t, 0);
+	afft(parity, t, 0);
 }
 
 // Compute the evaluations of the error locator polynomial
@@ -342,7 +342,7 @@ pub(crate) fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasu
 		codeword[i] = if erasure[i] { Additive(0) } else { codeword[i].mul(log_walsh2[i]) };
 	}
 
-	inverse_afft_in_novel_poly_basis(codeword, n, 0);
+	inverse_afft(codeword, n, 0);
 
 	// formal derivative
 
@@ -370,7 +370,7 @@ pub(crate) fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasu
 		assert_eq!(x, [codeword[i], codeword[i + 1]]);
 	}
 
-	afft_in_novel_poly_basis(codeword, n, 0);
+	afft(codeword, n, 0);
 
 	for i in 0..recover_up_to {
 		codeword[i] = if erasure[i] { codeword[i].mul(log_walsh2[i]) } else { Additive(0) };

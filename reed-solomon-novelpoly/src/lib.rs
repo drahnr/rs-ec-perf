@@ -3,11 +3,10 @@
 pub mod errors;
 pub use errors::*;
 
-mod field;
-pub(crate) use field::tables;
 
 // pub mod field::f256;
-pub mod field::f2e16;
+pub mod field;
+pub use field::f2e16;
 
 mod novel_poly_basis;
 pub use self::novel_poly_basis::*;

@@ -1,20 +1,20 @@
-use crate::field::FieldT;
+use crate::field::{FieldT, Castomat, MultiplierT, AdditiveT};
 
 use static_init::dynamic;
 
 #[dynamic(0)]
-pub(crate) static AFFT: AdditiveFFT<super::field::f2e16::Field> = AdditiveFFT::<F>::initalize();
+pub(crate) static AFFT: AdditiveFFT<super::field::f2e16::Field> = AdditiveFFT::<super::field::f2e16::Field>::initalize();
 
 
 /// Additive FFT and inverse in the "novel polynomial basis"
-pub(crate) struct AdditiveFFT<F> {
+pub(crate) struct AdditiveFFT<F: FieldT> {
     /// Multiplier form of twisted factors used in AdditiveFFT
-    pub skews: [Multiplier<F>; F::ONEMASK.cast_as()], // skew_multiplier
+    pub skews: [F::Multiplier; F::ONEMASK.cast_as()], // skew_multiplier
 }
 
 
 /// Formal derivative of polynomial in the new?? basis
-pub(crate) fn formal_derivative<F: FieldT>(cos: &mut [Additive<F>], size: usize) {
+pub(crate) fn formal_derivative<F: FieldT>(cos: &mut [F::Additive], size: usize) {
 	for i in 1..size {
 		let length = ((i ^ i - 1) + 1) >> 1;
 		for j in (i - length)..i {
@@ -40,12 +40,12 @@ pub(crate) fn formal_derivative<F: FieldT>(cos: &mut [Additive<F>], size: usize)
 // We're hunting for the differences and trying to undersrtand the algorithm.
 
 /// Inverse additive FFT in the "novel polynomial basis"
-pub(crate) fn inverse_afft<F: FieldT>(data: &mut [Additive<F>], size: usize, index: usize) {
+pub(crate) fn inverse_afft<F: FieldT>(data: &mut [F::Additive], size: usize, index: usize) {
     unsafe { &AFFT }.inverse_afft(data,size,index)
 }
 
 /// Additive FFT in the "novel polynomial basis"
-pub(crate) fn afft<F: FieldT>(data: &mut [Additive<F>], size: usize, index: usize) {
+pub(crate) fn afft<F: FieldT>(data: &mut [F::Additive], size: usize, index: usize) {
     unsafe { &AFFT }.afft(data,size,index)
 }
 
@@ -53,7 +53,7 @@ pub(crate) fn afft<F: FieldT>(data: &mut [Additive<F>], size: usize, index: usiz
 impl<F: Field> AdditiveFFT<F> {
 
     /// Inverse additive FFT in the "novel polynomial basis"
-    pub(crate) fn inverse_afft(&self, data: &mut [Additive<F>], size: usize, index: usize) {
+    pub(crate) fn inverse_afft(&self, data: &mut [F::Additive], size: usize, index: usize) {
     	// All line references to Algorithm 2 page 6288 of
     	// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
 
@@ -108,7 +108,7 @@ impl<F: Field> AdditiveFFT<F> {
     }
 
     /// Additive FFT in the "novel polynomial basis"
-    pub(crate) fn afft(&self, data: &mut [Additive<F>], size: usize, index: usize) {
+    pub(crate) fn afft(&self, data: &mut [F::Additive], size: usize, index: usize) {
     	// All line references to Algorithm 1 page 6287 of
     	// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
 
@@ -174,7 +174,8 @@ impl<F: Field> AdditiveFFT<F> {
         // representation, or mybe something else entirely.  (TODO)
     	let mut base: [F::Element; F::FIELD_BITS - 1] = Default::default();
 
-        let mut skews_additive = [Additive<F>(0); F::ONEMASK.cast_as()];
+		let additive_zero = <F::Additive as Customat<usize>>::from(0_usize);
+        let mut skews_additive = [additive_zero; F::ONEMASK.cast_as()];
 
     	for i in 1..F::FIELD_BITS {
     		base[i - 1] = 1 << i;
@@ -184,7 +185,7 @@ impl<F: Field> AdditiveFFT<F> {
     	// from page 6285 for all omega in the field.
     	for m in 0..(F::FIELD_BITS - 1) {
     		let step = 1 << (m + 1);
-    		skews_additive[(1 << m) - 1] = Additive<F>(0);
+    		skews_additive[(1 << m) - 1] = additive_zero;
     		for i in m..(F::FIELD_BITS - 1) {
     			let s = 1 << (i + 1);
 
@@ -192,7 +193,7 @@ impl<F: Field> AdditiveFFT<F> {
     			while j < s {
     				// Justified by (5) page 6285, except..
     				// we expect SKEW_FACTOR[j ^ field_base[i]] or similar
-    				skews_additive[j + s] = skews_additive[j] ^ Additive<F>(base[i]);
+    				skews_additive[j + s] = skews_additive[j] ^ F::Additive::from(base[i]);
     				j += step;
     			}
     		}
@@ -202,7 +203,7 @@ impl<F: Field> AdditiveFFT<F> {
     		// TODO: But why?
     		//
     		// let idx = mul_table(base[m], LOG_TABLE[(base[m] ^ 1_u16).cast_as()]);
-    		let idx = Additive<F>(base[m]).mul( Additive<F>(base[m] ^ 1).to_multiplier() );
+    		let idx = F::Additive::from(base[m]).mul( F::Additive::from(base[m] ^ 1).to_multiplier() );
             // WTF?!?
     		// base[m] = ONEMASK - LOG_TABLE[idx.cast_as()];
             base[m] = F::ONEMASK - idx.to_multiplier().0;
@@ -215,16 +216,17 @@ impl<F: Field> AdditiveFFT<F> {
     		for i in (m + 1)..(FIELD_BITS - 1) {
     			// WTF?!?
     			// let b = LOG_TABLE[(base[i] as u16 ^ 1_u16).cast_as()] as u32 + base[m] as u32;
-    			let b = Additive<F>(base[i] ^ 1).to_multiplier().to_wide() + (base[m] as Wide);
+    			let b = F::Additive::from(base[i] ^ 1).to_multiplier().to_wide() + (base[m] as F::Wide);
     			let b = b % (F::ONEMASK as Wide);
     			// base[i] = mul_table(base[i], b as u16);
-    			base[i] = Additive<F>(base[i]).mul(Multiplier<F>(b as Elt)).0;
+    			base[i] = F::Additive::from(base[i]).mul(F::Multiplier(b as F::Element)).0;
     		}
     	}
 
     	// Convert skew factors from Additive to Multiplier form
-        let mut skews_multiplier = [Multiplier<F>(0); F::ONEMASK.cast_as()];
-    	for i in 0..(ONEMASK.cast_as()) {
+		let one_mask: usize = F::ONEMASK.cast_as();
+        let mut skews_multiplier = [F::Multiplier::from(0_usize); one_mask];
+    	for i in 0..one_mask {
     		// SKEW_FACTOR[i] = LOG_TABLE[SKEW_FACTOR[i].cast_as()];
     		skews_multiplier[i] = skews_additive[i].to_multiplier();
     	}

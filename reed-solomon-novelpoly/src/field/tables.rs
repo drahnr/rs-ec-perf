@@ -1,6 +1,6 @@
 
 macro_rules! inc_table {
-    ($fieldname:tt) => {
+    ($fieldname:tt, $ft:ident) => {
 
         pub(crate) mod $fieldname {
             use super::super::$fieldname::$ft;
@@ -15,11 +15,11 @@ macro_rules! inc_table {
             pub(crate) const EXP_TABLE: [$ft::Element; $ft::FIELD_SIZE] = [0 as $ft::Element; $ft::FIELD_SIZE];
 
             #[cfg(table_bootstrap_complete)]
-            include!(concat!(env!("OUT_DIR"), "/table_", stringify!($ft::NAME), ".rs"));
+            include!(concat!(env!("OUT_DIR"), "/table_", stringify!($fieldname), ".rs"));
         }
     }
 }
 
 
 // inc_table!(f256);
-inc_table!(f2e16);
+inc_table!(f2e16, Field);

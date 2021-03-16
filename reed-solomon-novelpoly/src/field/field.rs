@@ -38,36 +38,44 @@ impl<T> Primitive for T where T:
 + BitAnd<Output=Self>
 + BitAndAssign {}
 
-// trait AdditiveT<F: FieldT>: Clone
-// + Copy
-// + Debug
-// + Default
-// + BitXor
-// + BitXorAssign
-// + PartialEq
-// + Eq {
-// 	fn to_wide(self) -> F::Wide;
-// 	fn from_wide(x: F::Wide) -> Additive<F>;
+pub trait AdditiveT<F: FieldT>: Clone
++ Copy
++ Debug
++ From<usize>
++ Default
++ BitXor
++ BitXorAssign
++ PartialEq
++ Eq {
+	fn to_wide(self) -> F::Wide;
+	fn from_wide(x: F::Wide) -> Self;
 
-// 	const ZERO: Additive<F><F>;
-// }
+	#[cfg(table_bootstrap_complete)]
+	fn to_multiplier(self) -> Self;
 
-// trait MultiplierT<F: FieldT>: Clone
-// + Copy
-// + Debug
-// + Default
-// + BitXor
-// + BitXorAssign
-// + PartialEq
-// + Eq {
-// 	fn to_multiplier(self) -> Multiplier<F>;
-// 	fn mul(self, other: Multiplier<F>) -> Additive<F>;
-// 	fn mul_assign_slice(selfy: &mut [Self], other: Multiplier<F>);
-// }
+	#[cfg(table_bootstrap_complete)]
+	fn mul(self, other: Self) -> F::Additive;
+
+	#[cfg(table_bootstrap_complete)]
+	fn mul_assign_slice(selfy: &mut [Self], other: Self);
+
+	const ZERO: Self;
+}
+
+pub trait MultiplierT<F: FieldT>: Clone
++ Copy
++ Debug
++ From<usize>
++ PartialEq
++ Eq {
+	fn to_wide(self) -> F::Wide;
+	fn from_wide(x: F::Wide) -> Self;
+	fn as_usize(&self) -> usize;
+}
 
 pub trait Castomat<Y> {
 	fn cast_as(self) -> Y;
-	fn cast_from(y: Y) -> Self;
+	fn from(y: Y) -> Self;
 }
 
 macro_rules! castomat_impl {
@@ -83,12 +91,17 @@ macro_rules! castomat_impl {
 			}
 
 			#[inline(always)]
-			fn cast_from(y: $y) -> $x {
+			fn from(y: $y) -> $x {
 				y as $x
 			}
 		}
 	};
 }
+
+castomat_impl!(u16 as u16);
+castomat_impl!(u32 as u32);
+castomat_impl!(u64 as u64);
+castomat_impl!(usize as usize);
 
 castomat_impl!(u16 as u32 as ..);
 castomat_impl!(u16 as u64 as ..);
@@ -103,20 +116,18 @@ pub trait FieldT: Debug
 
 	type Element:
 		Castomat<Self::Wide>
+		+ Castomat<Self::Element>
 			+ Castomat<usize>
 			+ Primitive;
 
 	type Wide:
 		Castomat<Self::Element>
+		+ Castomat<Self::Wide>
 			+ Castomat<usize>
 			+ Primitive;
 
-	// type Additive: From<Self::Element>
-// + From<Self::Wide>
-// + AdditiveT<Self>;
-	// type Multiplier: From<Self::Element>
-// + From<Self::Wide>
-// + MultiplierT<Self>;
+	type Additive: From<Self::Element> + From<Self::Wide> + AdditiveT<Self>;
+	type Multiplier: From<Self::Element> + From<Self::Wide> + MultiplierT<Self>;
 
     const GENERATOR: Self::Element;
 

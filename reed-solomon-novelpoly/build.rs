@@ -7,19 +7,23 @@ use std::fmt;
 use fs_err as fs;
 use fs::OpenOptions;
 
-mod ops {
-	include!("src/field/ops.rs");
+pub mod field {
+	include!("src/field/field.rs");
+	pub mod f2e16 {
+		use super::*;
+		include!("src/field/f2e16.rs");
+	}
+	pub mod ops {
+		include!("src/field/ops.rs");
+	}
 }
 
-use self::ops::Multiplier;
-
-include!("src/field/field.rs");
+use field::{AdditiveT, MultiplierT, Castomat, FieldT};
+use field::f2e16;
+use field::ops;
 
 // One level indentation required for `super::Field as FieldTrait`.
-mod f2e16 {
-    use super::write_const;
-    include!("src/field/f2e16.rs");
-}
+
 
 // mod f256 {
 //     use super::write_const;
@@ -43,49 +47,53 @@ where
 /// out how to shrink `LOG_WALSH` below the size of the full field (TODO).
 /// We thus assume it depends only upon the field for now.
 fn write_field_tables<F: FieldT, W: io::Write>(mut w: W) -> io::Result<()>
-where <F as FieldT>::Element: Debug
+where <F as FieldT>::Element: fmt::Debug
 {
-	let mut log_table: Vec<F::Element> = vec![0.cast_as() as F::Element; F::FIELD_SIZE];
-	let mut exp_table: Vec<F::Element> = vec![0.cast_as() as F::Element; F::FIELD_SIZE];
+	let zero_element = <F::Element as Castomat<usize>>::from(0_usize);
 
-	let mas = ((1_usize << F::FIELD_BITS - 1) - 1).cast_as() as F::Element;
+	let mut log_table: Vec<F::Element> = vec![zero_element; F::FIELD_SIZE];
+	let mut exp_table: Vec<F::Element> = vec![zero_element; F::FIELD_SIZE];
+
+
+
+	let mas = <F::Element as Castomat<usize>>::from((1_usize << F::FIELD_BITS - 1) - 1);
 	let mut state: usize = 1;
-	for i in 0_usize..F::ONEMASK.cast_as() as usize {
-		exp_table[state] = 0.cast_as() as F::Element;
+	for i in 0_usize..F::ONEMASK.cast_as() {
+		exp_table[state] = zero_element;
 		if (state >> F::FIELD_BITS - 1) != 0 {
-			state &= mas.cast_as() as usize;
-			state = state << 1_usize ^ F::GENERATOR.cast_as() as usize;
+			state &= Castomat::<usize>::cast_as(mas);
+			state = state << 1_usize ^ Castomat::<usize>::cast_as(F::GENERATOR);
 		} else {
 			state <<= 1;
 		}
 	}
 	exp_table[0] = F::ONEMASK;
 
-	log_table[0] = 0_usize.cast_as() as F::Element;
-	for i in 0..F::FIELD_BITS {
+	log_table[0] = zero_element;
+	for i in 0_usize..F::FIELD_BITS {
 		for j in 0..(1 << i) {
 			log_table[j + (1 << i)] = log_table[j] ^ F::BASE[i] as F::Element;
 		}
 	}
 	for i in 0_usize..F::FIELD_SIZE {
-		log_table[i] = exp_table[log_table[i].cast_as() as usize];
+		log_table[i] = exp_table[Castomat::<usize>::cast_as(log_table[i])];
 	}
 
 	for i in 0_usize..F::FIELD_SIZE {
-		exp_table[log_table[i].cast_as() as usize] = i.cast_as() as F::Element;
+		exp_table[Castomat::<usize>::cast_as(log_table[i])] = <F::Element as Castomat::<usize>>::from(i);
 	}
-	exp_table[F::ONEMASK.cast_as() as usize] = exp_table[0];
+	exp_table[Castomat::<usize>::cast_as(F::ONEMASK)] = exp_table[0];
 
 	write_const(&mut w, "LOG_TABLE", &log_table, format!("[{}; FIELD_SIZE]", std::any::type_name::<F::Element>()))?;
 	write_const(&mut w, "EXP_TABLE", &exp_table, format!("[{}; FIELD_SIZE]", std::any::type_name::<F::Element>()))?;
 
 	let mut log_walsh = log_table.into_iter()
-		.map(|x| Multiplier::<F>(x)).collect::<Vec<_>>();
+		.map(|x| F::Multiplier::from(x)).collect::<Vec<_>>();
 	assert_eq!(log_walsh.len(), F::FIELD_SIZE);
 
 	ops::walsh::<F>(&mut log_walsh[..], F::FIELD_SIZE);
 
-	write_const(w, "LOG_WALSH", &log_walsh[..], format!("[{}; FIELD_SIZE]", std::any::type_name::<Multiplier<F>>()))?;
+	write_const(w, "LOG_WALSH", &log_walsh[..], format!("[{}; FIELD_SIZE]", std::any::type_name::<F::Multiplier>()))?;
 	Ok(())
 }
 

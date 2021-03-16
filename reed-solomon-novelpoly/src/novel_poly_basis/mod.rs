@@ -36,7 +36,7 @@ pub struct CodeParams<F> {
 	wanted_n: usize,
 }
 
-impl<F: FieldT> CodeParams<F> {
+impl<F> CodeParams<F> where F: FieldT<Element=u16, Wide=u32> {
 	/// Create a new reed solomon erasure encoding wrapper
 	/// `k` the intended number of data shards needed to recover.
 	/// `n` the intended number of resulting shards.
@@ -78,7 +78,7 @@ pub struct ReedSolomon<F> {
 	wanted_n: usize,
 }
 
-impl<F: FieldT> ReedSolomon<F> {
+impl<F> ReedSolomon<F> where F: FieldT<Element=u16, Wide=u32> {
 	/// Returns the size per shard in bytes
 	pub fn shard_len(&self, payload_size: usize) -> usize {
 		let payload_symbols = (payload_size + 1) / 2;
@@ -170,7 +170,7 @@ impl<F: FieldT> ReedSolomon<F> {
 
 
 		// Evaluate error locator polynomial only once
-		let mut error_poly_in_log = [Multiplier<F>(0); F::FIELD_SIZE];
+		let mut error_poly_in_log = [F::Multiplier::from(0_usize); F::FIELD_SIZE];
 		eval_error_polynomial::<F>(&erasures[..], &mut error_poly_in_log[..], F::FIELD_SIZE);
 
 		let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);
@@ -181,10 +181,10 @@ impl<F: FieldT> ReedSolomon<F> {
 				.map(|x| {
 					x.as_ref().map(|x| {
 						let z = AsRef::<[[u8; 2]]>::as_ref(&x)[i];
-						Additive<F>(u16::from_be_bytes(z))
+						F::Additive::from(u16::from_be_bytes(z))
 					})
 				})
-				.collect::<Vec<Option<Additive<F>>>>();
+				.collect::<Vec<Option<F::Additive>>>();
 
 			assert_eq!(decoding_run.len(), self.n);
 

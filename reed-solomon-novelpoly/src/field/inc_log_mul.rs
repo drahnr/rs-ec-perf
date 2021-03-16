@@ -1,7 +1,5 @@
-
-
 use derive_more::{Add, AddAssign, BitXor, BitXorAssign, Sub, SubAssign};
-
+use core::convert::TryInto;
 
 /// Additive via XOR form of f2e16
 #[derive(Clone, Copy, Debug, Default, BitXor, BitXorAssign, PartialEq, Eq)] // PartialOrd,Ord
@@ -42,7 +40,6 @@ impl Additive {
 	/// Multiply field elements by a single multiplier, using SIMD if available
     #[inline(always)]
 	pub fn mul_assign_slice(selfy: &mut [Self], other: Multiplier) {
-		// TODO: SIMD
 		for s in selfy {
 			*s = s.mul(other);
 		}
@@ -87,4 +84,37 @@ pub fn walsh(data: &mut [Multiplier], size: usize) {
 		}
 		depart_no = depart_no_next;
 	}
+}
+
+
+fn bitpoly_mul16(mut a: Wide, mut b: Wide) -> Wide {
+    let mut r: Wide =0;
+    for i in 0..FIELD_BITS {
+        if (b>>i) & 1 != 0 {
+			r ^= a<<i;
+		}
+    }
+    r
+}
+
+fn gf_mul_bitpoly_reduced(mut a: Elt, mut b: Elt) -> Elt {
+    let len = FIELD_BITS;
+    let mut r: Wide = bitpoly_mul16(a as Wide,b as Wide);
+    let red : Wide = (1 << FIELD_BITS) + (GENERATOR as Wide);
+    for i in (len..=(len*2-1)).rev() {
+        if r & (1<<i) != 0 { r ^= (red<<(i-len)); }
+    }
+    r.try_into().unwrap()
+}
+
+#[test]
+fn cantor_basis() {
+    for w in BASE.windows(2) {
+        let b = w[1];
+        let square = gf_mul_bitpoly_reduced(b,b);
+        let a = w[0];
+        // let eq = if a == (square ^ b) { "==" } else { "!=" };
+        // println!("{:#b} {} {:#b}\n", a, eq, square ^ b);
+        assert_eq!(a, square ^ b);
+    }
 }

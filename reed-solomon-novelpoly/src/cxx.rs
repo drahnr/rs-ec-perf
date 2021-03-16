@@ -31,8 +31,8 @@ pub fn reconstruct<S: Shard>(_received_shards: Vec<Option<S>>) -> Option<Vec<u8>
 
 #[cfg(test)]
 mod tests {
-	use rand::Rng;
 	use rand::prelude::SmallRng;
+	use rand::Rng;
 
 	use crate::novel_poly_basis::{fft_in_novel_poly_basis, GFSymbol};
 

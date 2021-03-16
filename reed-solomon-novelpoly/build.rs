@@ -1,10 +1,13 @@
 use std::env;
 
+use std::fmt;
 use std::io;
 use std::path::PathBuf;
-use std::fmt;
 
 use fs_err as fs;
+
+include!("src/util.rs");
+include!("src/field/gen.rs");
 
 mod f2e16 {
 	include!("inc_gen_field_tables.rs");

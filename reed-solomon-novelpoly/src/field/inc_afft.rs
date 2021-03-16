@@ -11,7 +11,7 @@ pub struct AdditiveFFT {
     /// Multiplier form of twisted factors used in AdditiveFFT
     pub skews: [Multiplier; ONEMASK as usize], // skew_multiplier
     /// Factors used in formal derivative, actually all zero if field was constructed correctly.
-    #[cfg(test)]
+    #[cfg(b_is_not_one)]
     pub B: [Multiplier; FIELD_SIZE >> 1],
 }
 
@@ -33,36 +33,28 @@ pub fn formal_derivative(cos: &mut [Additive], size: usize) {
 	}
 }
 
+
 /// Formal derivative of polynomial in tweaked?? basis
-#[allow(non_snake_case)]
 pub fn tweaked_formal_derivative(codeword: &mut [Additive], n: usize) {
-    #[cfg(test)]
+    #[cfg(b_is_not_one)]
     let B = unsafe { &AFFT.B };
 
     // We change nothing when multiplying by b from B.
-    #[cfg(test)]
+    #[cfg(b_is_not_one)]
 	for i in (0..n).into_iter().step_by(2) {
 		let b = Multiplier(ONEMASK) - B[i >> 1];
-		#[cfg(test)]
-		let x: [_; 2] = [codeword[i], codeword[i + 1]];
 		codeword[i] = codeword[i].mul(b);
 		codeword[i + 1] = codeword[i + 1].mul(b);
-		#[cfg(test)]
-		assert_eq!(x, [codeword[i], codeword[i + 1]]);
 	}
 
 	formal_derivative(codeword, n);
 
 	// Again changes nothing by multiplying by b although b differs here.
-	#[cfg(test)]
+	#[cfg(b_is_not_one)]
 	for i in (0..n).into_iter().step_by(2) {
-		#[cfg(test)]
-		let x: [_; 2] = [codeword[i], codeword[i + 1]];
 		let b = B[i >> 1];
 		codeword[i] = codeword[i].mul(b);
 		codeword[i + 1] = codeword[i + 1].mul(b);
-		#[cfg(test)]
-		assert_eq!(x, [codeword[i], codeword[i + 1]]);
 	}
 }
 
@@ -75,10 +67,12 @@ pub fn tweaked_formal_derivative(codeword: &mut [Additive], n: usize) {
 // https://github.com/catid/leopard/blob/master/docs/HighRateDecoder.pdf
 // We're hunting for the differences and trying to undersrtand the algorithm.
 
+
 /// Inverse additive FFT in the "novel polynomial basis"
 pub fn inverse_afft(data: &mut [Additive], size: usize, index: usize) {
     unsafe { &AFFT }.inverse_afft(data,size,index)
 }
+
 
 /// Additive FFT in the "novel polynomial basis"
 pub fn afft(data: &mut [Additive], size: usize, index: usize) {
@@ -87,7 +81,6 @@ pub fn afft(data: &mut [Additive], size: usize, index: usize) {
 
 
 impl AdditiveFFT {
-
     /// Inverse additive FFT in the "novel polynomial basis"
     pub fn inverse_afft(&self, data: &mut [Additive], size: usize, index: usize) {
     	// All line references to Algorithm 2 page 6288 of
@@ -205,7 +198,6 @@ impl AdditiveFFT {
 
 
     //initialize SKEW_FACTOR and B
-    #[allow(non_snake_case)]
     fn initalize() -> AdditiveFFT {
         // We cannot yet identify if base has an additive or multiplicative
         // representation, or mybe something else entirely.  (TODO)
@@ -269,7 +261,7 @@ impl AdditiveFFT {
         AdditiveFFT {
             // skews_additive,
             skews: skews_multiplier,
-            #[cfg(test)]
+            #[cfg(b_is_not_one)]
             B: {
                 let mut B = [Multiplier(0); FIELD_SIZE >> 1];
 
@@ -293,8 +285,33 @@ impl AdditiveFFT {
             	}
 
                 B
-            } // cfg(test)
+            }
         }
     }
 
-} // impl AdditiveFFT
+}
+
+
+#[cfg(b_is_not_one)]
+#[test]
+fn b_is_one() {
+	// This test ensure that b can be safely bypassed in tweaked_formal_derivative
+    let B = unsafe { &AFFT.B };
+    fn test_b(b: Multiplier) {
+        for x in 0..FIELD_SIZE {
+            let x = Additive(x as Elt);
+        	assert_eq!(x, x.mul(b));
+        }
+    }
+
+    let mut old_b = None;
+
+	for i in (0..FIELD_SIZE).into_iter().step_by(256) {
+        let b = B[i >> 1];
+        if old_b != Some(b) {
+            test_b( Multiplier(ONEMASK) - b );
+            test_b( b );
+            old_b = Some(b);
+        }
+    }
+}

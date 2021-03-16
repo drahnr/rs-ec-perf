@@ -5,21 +5,18 @@
 // Lin, Han and Chung, "Novel Polynomial Basis and Its Application to Reed-Solomon Erasure Codes," FOCS14.
 // (http://arxiv.org/abs/1404.3458)
 
-use crate::f2e16::*;
 use crate::errors::*;
+use crate::f2e16::*;
 use crate::Shard;
 
-
-mod algorithms;
 mod encode;
 mod reconstruct;
-mod util;
 
-pub(crate) use self::algorithms::*;
 pub use self::encode::*;
 pub use self::reconstruct::*;
-pub use self::util::*;
+pub use super::util::*;
 
+use super::field::f2e16::*;
 
 /// Params for the encoder / decoder
 /// derived from a target validator count.
@@ -60,7 +57,7 @@ impl CodeParams {
 		if n_po2 > FIELD_SIZE as usize {
 			return Err(Error::WantedShardCountTooHigh(n));
 		}
-		Ok(Self {n: n_po2, k: k_po2, wanted_n: n })
+		Ok(Self { n: n_po2, k: k_po2, wanted_n: n })
 	}
 
 	// make a reed-solomon instance.
@@ -69,7 +66,6 @@ impl CodeParams {
 			.expect("this struct is not created with invalid shard number; qed")
 	}
 }
-
 
 pub struct ReedSolomon {
 	n: usize,
@@ -87,7 +83,6 @@ impl ReedSolomon {
 	}
 
 	pub(crate) fn new(n: usize, k: usize, wanted_n: usize) -> Result<Self> {
-		setup();
 		if !is_power_of_2(n) && !is_power_of_2(k) {
 			Err(Error::ParamterMustBePowerOf2 { n, k })
 		} else {
@@ -167,7 +162,6 @@ impl ReedSolomon {
 			})
 			.expect("Existential shard count is at least k shards. qed");
 
-
 		// Evaluate error locator polynomial only once
 		let mut error_poly_in_log = [Multiplier(0); FIELD_SIZE];
 		eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
@@ -195,7 +189,6 @@ impl ReedSolomon {
 		Ok(acc)
 	}
 }
-
 
 #[cfg(test)]
 mod tests;

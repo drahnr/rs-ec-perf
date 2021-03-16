@@ -3,7 +3,10 @@
 pub mod errors;
 pub use errors::*;
 
-pub mod f2e16;
+
+// pub mod field::f256;
+pub mod field;
+pub use field::f2e16;
 
 mod novel_poly_basis;
 pub use self::novel_poly_basis::*;
@@ -25,8 +28,8 @@ mod test {
 
 	#[cfg(feature = "naive")]
 	#[test]
-	fn status_quo_roundtrip() -> Result<()> {
-		roundtrip(status_quo::encode::<WrappedShard>, status_quo::reconstruct::<WrappedShard>, &BYTES[..1337], N_SHARDS)
+	fn naive_roundtrip() -> Result<()> {
+		roundtrip(naive::encode::<WrappedShard>, naive::reconstruct::<WrappedShard>, &BYTES[..1337], N_SHARDS)
 	}
 
 	#[test]

@@ -6,11 +6,11 @@ Runs encoding and reconstruction in `O(n lg(n))`. Note that for small number `n`
 
 ## Goals
 
-Be really fast for `n > 100`.
-
-## Non-goals
-
-TODO
+Be fast for `n > 100` and in particular for `100 < n < 2_000`.
 
 [1]: https://www.citi.sinica.edu.tw/papers/whc/4454-F.pdf
 [2]: https://arxiv.org/abs/1404.3458
+
+# License
+
+Apache-2.0 and MIT

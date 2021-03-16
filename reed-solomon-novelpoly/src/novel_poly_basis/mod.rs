@@ -5,17 +5,18 @@
 // Lin, Han and Chung, "Novel Polynomial Basis and Its Application to Reed-Solomon Erasure Codes," FOCS14.
 // (http://arxiv.org/abs/1404.3458)
 
-use crate::f2e16::*;
+use crate::field::f2e16::*;
 use crate::errors::*;
 use crate::Shard;
 
-
+mod afft;
 mod algorithms;
 mod encode;
 mod reconstruct;
 mod util;
 
 pub(crate) use self::algorithms::*;
+pub(crate) use self::afft::*;
 pub use self::encode::*;
 pub use self::reconstruct::*;
 pub use self::util::*;
@@ -24,7 +25,7 @@ pub use self::util::*;
 /// Params for the encoder / decoder
 /// derived from a target validator count.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CodeParams {
+pub struct CodeParams<F> {
 	/// total number of message symbols to send
 	/// Invariant is a power of base 2
 	n: usize,
@@ -35,7 +36,7 @@ pub struct CodeParams {
 	wanted_n: usize,
 }
 
-impl CodeParams {
+impl<F> CodeParams<F> where F: FieldT<Element=u16, Wide=u32> {
 	/// Create a new reed solomon erasure encoding wrapper
 	/// `k` the intended number of data shards needed to recover.
 	/// `n` the intended number of resulting shards.
@@ -57,27 +58,27 @@ impl CodeParams {
 		// which is true by definition
 		assert!(n * k_po2 <= n_po2 * k);
 
-		if n_po2 > FIELD_SIZE as usize {
+		if n_po2 > F::FIELD_SIZE.cast_as() {
 			return Err(Error::WantedShardCountTooHigh(n));
 		}
 		Ok(Self {n: n_po2, k: k_po2, wanted_n: n })
 	}
 
 	// make a reed-solomon instance.
-	pub fn make_encoder(&self) -> ReedSolomon {
-		ReedSolomon::new(self.n, self.k, self.wanted_n)
+	pub fn make_encoder(&self) -> ReedSolomon<F> {
+		ReedSolomon::<F>::new(self.n, self.k, self.wanted_n)
 			.expect("this struct is not created with invalid shard number; qed")
 	}
 }
 
 
-pub struct ReedSolomon {
+pub struct ReedSolomon<F> {
 	n: usize,
 	k: usize,
 	wanted_n: usize,
 }
 
-impl ReedSolomon {
+impl<F> ReedSolomon<F> where F: FieldT<Element=u16, Wide=u32> {
 	/// Returns the size per shard in bytes
 	pub fn shard_len(&self, payload_size: usize) -> usize {
 		let payload_symbols = (payload_size + 1) / 2;
@@ -125,7 +126,7 @@ impl ReedSolomon {
 			let data_piece = &bytes[i..end];
 			assert!(!data_piece.is_empty());
 			assert!(data_piece.len() <= k2);
-			let encoding_run = encode_sub(data_piece, self.n, self.k)?;
+			let encoding_run = encode_sub::<F>(data_piece, self.n, self.k)?;
 			for val_idx in 0..validator_count {
 				AsMut::<[[u8; 2]]>::as_mut(&mut shards[val_idx])[chunk_idx] = encoding_run[val_idx].0.to_be_bytes();
 			}
@@ -148,7 +149,7 @@ impl ReedSolomon {
 		let erasures = received_shards
 			.iter()
 			.map(|x| x.is_none())
-			.inspect(|erased| existential_count += !*erased as usize)
+			.inspect(|erased| existential_count += !*erased.cast_as())
 			.collect::<Vec<bool>>();
 
 		if existential_count < self.k {
@@ -169,8 +170,8 @@ impl ReedSolomon {
 
 
 		// Evaluate error locator polynomial only once
-		let mut error_poly_in_log = [Multiplier(0); FIELD_SIZE];
-		eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
+		let mut error_poly_in_log = [F::Multiplier::from(0_usize); F::FIELD_SIZE];
+		eval_error_polynomial::<F>(&erasures[..], &mut error_poly_in_log[..], F::FIELD_SIZE);
 
 		let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);
 		for i in 0..shard_len_in_syms {
@@ -180,10 +181,10 @@ impl ReedSolomon {
 				.map(|x| {
 					x.as_ref().map(|x| {
 						let z = AsRef::<[[u8; 2]]>::as_ref(&x)[i];
-						Additive(u16::from_be_bytes(z))
+						F::Additive::from(u16::from_be_bytes(z))
 					})
 				})
-				.collect::<Vec<Option<Additive>>>();
+				.collect::<Vec<Option<F::Additive>>>();
 
 			assert_eq!(decoding_run.len(), self.n);
 

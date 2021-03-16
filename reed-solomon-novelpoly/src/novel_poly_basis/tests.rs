@@ -319,7 +319,7 @@ fn ported_c_test() {
 
 	for i in 0..K {
 		//filled with random numbers
-		data[i] = Additive((i * i % ONEMASK as usize) as u16);
+		data[i] = Additive((i * i % ONEMASK.cast_as()) as u16);
 		// data[i] = rand_gf_element();
 	}
 

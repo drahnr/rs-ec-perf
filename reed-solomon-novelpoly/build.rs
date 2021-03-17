@@ -43,6 +43,10 @@ fn gen_ffi_novel_poly_basis_bindgen() {
 fn main() -> io::Result<()> {
 	f2e16::gen_field_tables()?;
 	f256::gen_field_tables()?;
+	// to avoid a circular loop, we need to import a dummy
+	// table, such that we do not depend on the thing we are
+	// about to spawn
+	println!("cargo:rustc-cfg=table_bootstrap_complete");
 
 	#[cfg(feature = "with-alt-cxx-impl")]
 	{

@@ -14,6 +14,8 @@ where
 pub(crate) static {}: {} = {:#?};"###, name, type_name, value)
 }
 
+
+
 /// Compute tables determined solely by the field, which never depend
 /// upon the FFT domain or erasure coding paramaters.
 ///
@@ -23,6 +25,18 @@ pub(crate) static {}: {} = {:#?};"###, name, type_name, value)
 /// We thus assume it depends only upon the field for now.
 #[allow(unused)]
 fn write_field_tables<W: io::Write>(mut w: W) -> io::Result<()> {
+    let mut base: [Elt; FIELD_BITS] = generate_cantor_basis(BASE_FINAL).unwrap(
+    );
+    // Find new Cantor basis if desired, but requires correct multiplication
+    /*
+    unwrap_or_else(|| {
+        for bf in (0..=255).rev() {
+            if let Some(base) = generate_cantor_basis(bf) { return base; }
+        }
+        panic!();
+    });
+    */
+
 	let mut log_table: [Elt; FIELD_SIZE] = [0; FIELD_SIZE];
 	let mut exp_table: [Elt; FIELD_SIZE] = [0; FIELD_SIZE];
 
@@ -42,7 +56,7 @@ fn write_field_tables<W: io::Write>(mut w: W) -> io::Result<()> {
 	log_table[0] = 0;
 	for i in 0..FIELD_BITS {
 		for j in 0..(1 << i) {
-			log_table[j + (1 << i)] = log_table[j] ^ BASE[i];
+			log_table[j + (1 << i)] = log_table[j] ^ base[i];
 		}
 	}
 	for i in 0..FIELD_SIZE {
@@ -54,8 +68,10 @@ fn write_field_tables<W: io::Write>(mut w: W) -> io::Result<()> {
 	}
 	exp_table[ONEMASK as usize] = exp_table[0];
 
-	write_const(&mut w, "LOG_TABLE", &log_table, "[Elt; FIELD_SIZE]")?;
-	write_const(&mut w, "EXP_TABLE", &exp_table, "[Elt; FIELD_SIZE]")?;
+	write_const(&mut w, "BASE", &base, "[Elt; FIELD_BITS]") ?;
+
+	write_const(&mut w, "LOG_TABLE", &log_table, "[Elt; FIELD_SIZE]") ?;
+	write_const(&mut w, "EXP_TABLE", &exp_table, "[Elt; FIELD_SIZE]") ?;
 
 	// mem_cpy(&mut log_walsh[..], &log_table[..]);
 	let log_walsh = log_table.clone();
@@ -74,16 +90,8 @@ fn write_field_tables<W: io::Write>(mut w: W) -> io::Result<()> {
 /// require tables to build other tables.
 /// ref.  https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 pub fn gen_field_tables() -> io::Result<()> {
-	// to avoid a circular loop, we need to import a dummy
-	// table, such that we do not depend on the thing we are
-	// about to spawn
-	println!("cargo:rustc-cfg=table_bootstrap_complete");
-
 	let out = env::var("OUT_DIR").expect("OUT_DIR is set by cargo after process launch. qed");
-
 	let path = PathBuf::from(out).join(format!("table_{}.rs", FIELD_NAME));
 	let f = fs::OpenOptions::new().create(true).truncate(true).write(true).open(path)?;
-	write_field_tables(f)?;
-
-	Ok(())
+	write_field_tables(f)
 }

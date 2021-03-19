@@ -63,23 +63,6 @@ fn k_n_construction() {
 }
 
 #[test]
-fn flt_back_and_forth() {
-	const N: usize = 128;
-
-	let mut data = (0..N).into_iter().map(|_x| rand_gf_element()).collect::<Vec<Additive>>();
-	let expected = data.clone();
-
-	afft(&mut data, N, N / 4);
-
-	// make sure something is done
-	assert!(data.iter().zip(expected.iter()).filter(|(a, b)| { a != b }).count() > 0);
-
-	inverse_afft(&mut data, N, N / 4);
-
-	itertools::assert_equal(data, expected);
-}
-
-#[test]
 fn sub_encode_decode() -> Result<()> {
 	let mut rng = rand::rngs::SmallRng::from_seed(SMALL_RNG_SEED);
 

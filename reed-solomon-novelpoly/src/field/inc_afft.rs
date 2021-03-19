@@ -318,3 +318,27 @@ impl AdditiveFFT {
     }
 
 }
+
+
+#[test]
+fn flt_back_and_forth() {
+    use rand::prelude::*;
+    let mut rng = thread_rng();
+    let uni = rand::distributions::Uniform::<Elt>::new_inclusive(0, ONEMASK);
+
+    const N: usize = 128;
+    for (k,n) in &[(N/4,N)] {
+        let mut data = (0..*n).into_iter().map( |_| Additive(uni.sample(&mut rng)) ).collect::<Vec<Additive>>();
+        let expected = data.clone();
+
+        afft(&mut data, *n, *k);
+
+        // make sure something is done
+        assert!(data.iter().zip(expected.iter()).filter(|(a, b)| { a != b }).count() > 0);
+
+        inverse_afft(&mut data, *n, *k);
+
+        assert_eq!(data, expected);
+    }
+}
+

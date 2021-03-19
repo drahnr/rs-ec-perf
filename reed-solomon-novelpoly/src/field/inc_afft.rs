@@ -4,16 +4,15 @@ use static_init::{dynamic};
 #[dynamic(0)]
 pub static AFFT: AdditiveFFT = AdditiveFFT::initalize();
 
-
 /// Additive FFT and inverse in the "novel polynomial basis"
 #[allow(non_snake_case)]
 pub struct AdditiveFFT {
     /// Multiplier form of twisted factors used in AdditiveFFT
     pub skews: [Multiplier; ONEMASK as usize], // skew_multiplier
     /// Factors used in formal derivative, actually all zero if field was constructed correctly.
-    #[cfg(b_is_not_one)]
     pub B: [Multiplier; FIELD_SIZE >> 1],
 }
+
 
 /// Formal derivative of polynomial in the new?? basis
 pub fn formal_derivative(cos: &mut [Additive], size: usize) {
@@ -58,7 +57,9 @@ pub fn tweaked_formal_derivative(codeword: &mut [Additive], n: usize) {
 }
 
 /// This test ensure that b can safely be bypassed in tweaked_formal_derivative
-#[cfg(b_is_not_one)]
+// TODO: This is wrong right now, use negation!!
+#[cfg(not(b_is_not_one))]
+#[allow(non_snake_case)]
 #[test]
 fn b_is_one() {
     let B = unsafe { &AFFT.B };
@@ -78,7 +79,6 @@ fn b_is_one() {
         }
     }
 }
-
 
 
 // We want the low rate scheme given in
@@ -101,6 +101,15 @@ pub fn afft(data: &mut [Additive], size: usize, index: usize) {
 
 
 impl AdditiveFFT {
+    #[inline(always)]
+    pub fn compute_skew(&self, depart_no: usize, j: usize, index: usize) -> Multiplier {
+        let i = (j+index) >> depart_no.trailing_zeros();
+        debug_assert_eq!(i, (j+index)/depart_no);
+        let skew = Additive((i - 1) as Elt).to_multiplier();
+        // Actually this does not yet work, indicating a mistake 
+        // debug_assert!( skew == self.skews[j + index - 1] );
+        skew
+    }
 
     /// Inverse additive FFT in the "novel polynomial basis"
     pub fn inverse_afft(&self, data: &mut [Additive], size: usize, index: usize) {
@@ -137,7 +146,7 @@ impl AdditiveFFT {
     			// Algorithm 2 indexs the skew factor in line 5 page 6288
     			// by i and \omega_{j 2^{i+1}}, but not by r explicitly.
     			// We further explore this confusion below. (TODO)
-    			let skew = self.skews[j + index - 1];
+    			let skew = self.compute_skew(depart_no,j,index);
     			// It's reasonale to skip the loop if skew is zero, but doing so with
     			// all bits set requires justification.	 (TODO)
     			if skew.0 != ONEMASK {
@@ -190,7 +199,7 @@ impl AdditiveFFT {
     			// we think r actually appears but the skew factor repeats itself
     			// like in (19) in the proof of Lemma 4.  (TODO)
     			// We should understand the rest of this basis story, like (8) too.	 (TODO)
-    			let skew = self.skews[j + index - 1];
+    			let skew = self.compute_skew(depart_no,j,index);
     			// It's reasonale to skip the loop if skew is zero, but doing so with
     			// all bits set requires justification.	 (TODO)
     			if skew.0 != ONEMASK {
@@ -218,7 +227,8 @@ impl AdditiveFFT {
     }
 
 
-    //initialize SKEW_FACTOR and B
+    /// Initialize SKEW_FACTOR and B
+    #[allow(non_snake_case)]
     fn initalize() -> AdditiveFFT {
         // We cannot yet identify if base has an additive or multiplicative
         // representation, or mybe something else entirely.  (TODO)
@@ -279,59 +289,32 @@ impl AdditiveFFT {
     		skews_multiplier[i] = skews_additive[i].to_multiplier();
     	}
 
+        let mut B = [Multiplier(0); FIELD_SIZE >> 1];
+
+    	// TODO: How does this alter base?
+    	base[0] = ONEMASK - base[0];
+    	for i in 1..(FIELD_BITS - 1) {
+    		base[i] = ( (
+                (ONEMASK as Wide) - (base[i] as Wide) + (base[i - 1] as Wide)
+            ) % (ONEMASK as Wide) ) as Elt;
+    	}
+
+    	// TODO: What is B anyways?
+    	B[0] = Multiplier(0);
+    	for i in 0..(FIELD_BITS - 1) {
+    		let depart = 1 << i;
+    		for j in 0..depart {
+    			B[j + depart] = Multiplier( ((
+                    B[j].to_wide() + (base[i] as Wide)
+                ) % (ONEMASK as Wide)) as Elt);
+    		}
+    	}
+
         AdditiveFFT {
             // skews_additive,
             skews: skews_multiplier,
-			#[cfg(b_is_not_one)]
-			B: {
-                let mut B = [Multiplier(0); FIELD_SIZE >> 1];
-
-            	// TODO: How does this alter base?
-            	base[0] = ONEMASK - base[0];
-            	for i in 1..(FIELD_BITS - 1) {
-            		base[i] = ( (
-                        (ONEMASK as Wide) - (base[i] as Wide) + (base[i - 1] as Wide)
-                    ) % (ONEMASK as Wide) ) as Elt;
-            	}
-
-            	// TODO: What is B anyways?
-            	B[0] = Multiplier(0);
-            	for i in 0..(FIELD_BITS - 1) {
-            		let depart = 1 << i;
-            		for j in 0..depart {
-            			B[j + depart] = Multiplier( ((
-                            B[j].to_wide() + (base[i] as Wide)
-                        ) % (ONEMASK as Wide)) as Elt);
-            		}
-            	}
-
-                B
-            }
+			B,
         }
     }
 
-}
-
-#[cfg(b_is_not_one)]
-#[test]
-fn b_is_one() {
-	// This test ensure that b can be safely bypassed in tweaked_formal_derivative
-    let B = unsafe { &AFFT.B };
-    fn test_b(b: Multiplier) {
-        for x in 0..FIELD_SIZE {
-            let x = Additive(x as Elt);
-        	assert_eq!(x, x.mul(b));
-        }
-    }
-
-    let mut old_b = None;
-
-	for i in (0..FIELD_SIZE).into_iter().step_by(256) {
-        let b = B[i >> 1];
-        if old_b != Some(b) {
-            test_b( Multiplier(ONEMASK) - b );
-            test_b( b );
-            old_b = Some(b);
-        }
-    }
 }

@@ -10,7 +10,8 @@ pub const ONEMASK: Elt = (FIELD_SIZE - 1) as Elt;
 
 /// Quotient ideal generator given by tail of irreducible polynomial
 // Valid Cantor basis, passes embedded_gf16
-pub const GENERATOR: Elt = 0x1D; //GF(2^8): x^8 + x^4 + x^3 + x^2 + 1
+// pub const GENERATOR: Elt = 0x1D; //GF(2^8): x^8 + x^4 + x^3 + x^2 + 1
+
 // pub const GENERATOR: Elt = 0x71; //GF(2^8): z^8 + z^6 + z^5 + z^4 + 1
 // pub const GENERATOR: Elt = 0x2B; //GF(2^8): x^8 + x^5 + x^3 + x + 1
 // pub const GENERATOR: Elt = 0x2D; //GF(2^8): x^8 + x^5 + x^3 + x^2 + 1
@@ -24,7 +25,7 @@ pub const GENERATOR: Elt = 0x1D; //GF(2^8): x^8 + x^4 + x^3 + x^2 + 1
 // pub const GENERATOR: Elt = 0x77; //GF(2^8): z^8 + z^6 + z^5 + z^4 + z^3 + 1
 
 // Is this Chen's suggested tower?  Does not yield a Cantor basis.
-// pub const GENERATOR: Elt = 0x79; //GF(2^8): z^8 + z^6 + z^5 + z^4 + z^3 + 1
+pub const GENERATOR: Elt = 0x7B; //GF(2^8): z^8 + z^6 + z^5 + z^4 + z^3 + z + 1
 
 // Select for GFNI compatability, but lacks an embedded GF(16).
 // pub const GENERATOR: Elt = 0x1B; //GF(2^8): x^8 + x^4 + x^3 + x + 1

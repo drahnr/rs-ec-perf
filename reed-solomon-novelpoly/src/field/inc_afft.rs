@@ -106,8 +106,13 @@ impl AdditiveFFT {
         let i = (j+index) >> depart_no.trailing_zeros();
         debug_assert_eq!(i, (j+index)/depart_no);
         let skew = Additive((i - 1) as Elt).to_multiplier();
-        // Actually this does not yet work, indicating a mistake 
-        // debug_assert!( skew == self.skews[j + index - 1] );
+        // let skew = self.skews[j + index - 1];
+        // Actually this does not yet work, indicating a mistake
+        use core::any::TypeId;
+        debug_assert!(
+            TypeId::of::<Elt>() != TypeId::of::<u8>() ||
+            skew == self.skews[j + index - 1] 
+        );
         skew
     }
 

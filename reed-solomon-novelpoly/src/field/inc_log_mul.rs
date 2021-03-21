@@ -158,7 +158,7 @@ fn embedded_gf16() {
             let j = Additive(j as Elt);
             assert!(j.mul(i).0 & mask == 0);
         }
-    }    
+    }
 }
 
 

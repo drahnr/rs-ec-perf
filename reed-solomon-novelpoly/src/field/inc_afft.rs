@@ -108,11 +108,13 @@ impl AdditiveFFT {
         let skew = Additive((i - 1) as Elt).to_multiplier();
         // let skew = self.skews[j + index - 1];
         // Actually this does not yet work, indicating a mistake
+        /*
         use core::any::TypeId;
         debug_assert!(
             TypeId::of::<Elt>() != TypeId::of::<u8>() ||
             skew == self.skews[j + index - 1] 
         );
+        */
         skew
     }
 

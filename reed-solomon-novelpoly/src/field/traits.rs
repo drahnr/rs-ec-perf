@@ -75,6 +75,6 @@ macro_rules! decl_field_additive {
 		include!(concat!(env!("OUT_DIR"), "/table_", $name, ".rs"));
 
 	};
-} // macro_rules! decl_field
+} // macro_rules! decl_field_additive
 
 

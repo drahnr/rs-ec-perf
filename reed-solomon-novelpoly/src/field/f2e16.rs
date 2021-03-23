@@ -19,7 +19,7 @@ pub const GENERATOR: Elt = 0x2D; // x^16 + x^5 + x^3 + x^2 + 1
 /// Cantor basis' final element
 pub const BASE_FINAL: Elt = 39198;
 
-include!("inc_log_mul.rs");
+include!("inc_logarithm.rs");
 
 #[cfg(table_bootstrap_complete)]
 include!("inc_afft.rs");

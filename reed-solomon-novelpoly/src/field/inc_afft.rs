@@ -14,10 +14,10 @@ pub static AFFT_TABLES: AfftTables = AfftTables::initalize();
 /// for computing Reed-Solomon in the "novel polynomial basis".
 #[allow(non_snake_case)]
 pub struct AfftTables {
-    /// Multiplier form of twisted factors used in our additive FFT
-    pub skews: [Multiplier; ONEMASK as usize], // skew_multiplier
+    /// Logarithm form of twisted factors used in our additive FFT
+    pub skews: [Logarithm; ONEMASK as usize], // skew_multiplier
     /// Factors used in formal derivative, actually all zero if field was constructed correctly.
-    pub B: [Multiplier; FIELD_SIZE >> 1],
+    pub B: [Logarithm; FIELD_SIZE >> 1],
 }
 
 
@@ -30,7 +30,7 @@ pub fn tweaked_formal_derivative(codeword: &mut [Additive], n: usize) {
     // We change nothing when multiplying by b from B.
 	#[cfg(b_is_not_one)]
 	for i in (0..n).into_iter().step_by(2) {
-		let b = Multiplier(ONEMASK) - B[i >> 1];
+		let b = Logarithm(ONEMASK) - B[i >> 1];
 		codeword[i] = codeword[i].mul(b);
 		codeword[i + 1] = codeword[i + 1].mul(b);
 	}
@@ -53,7 +53,7 @@ pub fn tweaked_formal_derivative(codeword: &mut [Additive], n: usize) {
 #[test]
 fn b_is_one() {
     let B = unsafe { &AFFT_TABLES.B };
-    fn test_b(b: Multiplier) {
+    fn test_b(b: Logarithm) {
         for x in 0..FIELD_SIZE {
             let x = Additive(x as Elt);
         	assert_eq!(x, x.mul(b));
@@ -63,7 +63,7 @@ fn b_is_one() {
 	for i in (0..FIELD_SIZE).into_iter().step_by(256) {
         let b = B[i >> 1];
         if old_b != Some(b) {
-            test_b( Multiplier(ONEMASK) - b );
+            test_b( Logarithm(ONEMASK) - b );
             test_b( b );
             old_b = Some(b);
         }
@@ -72,7 +72,7 @@ fn b_is_one() {
 
 
 impl AfftField for Additive {
-    type Multiplier = Multiplier;
+    type Multiplier = Logarithm;
 
     #[inline(always)]
     fn compute_skew(_depart_no: usize, j: usize, index: usize) -> Option<Self::Multiplier> {
@@ -146,18 +146,18 @@ impl AfftTables {
     			let b = Additive(base[i] ^ 1).to_multiplier().to_wide() + (base[m] as Wide);
     			let b = b % (ONEMASK as Wide);
     			// base[i] = mul_table(base[i], b as u16);
-    			base[i] = Additive(base[i]).mul(Multiplier(b as Elt)).0;
+    			base[i] = Additive(base[i]).mul(Logarithm(b as Elt)).0;
     		}
     	}
 
-    	// Convert skew factors from Additive to Multiplier form
-        let mut skews_multiplier = [Multiplier(0); ONEMASK as usize];
+    	// Convert skew factors from Additive to Logarithm form
+        let mut skews_multiplier = [Logarithm(0); ONEMASK as usize];
     	for i in 0..(ONEMASK as usize) {
     		// SKEW_FACTOR[i] = LOG_TABLE[SKEW_FACTOR[i] as usize];
     		skews_multiplier[i] = skews_additive[i].to_multiplier();
     	}
 
-        let mut B = [Multiplier(0); FIELD_SIZE >> 1];
+        let mut B = [Logarithm(0); FIELD_SIZE >> 1];
 
     	// TODO: How does this alter base?
     	base[0] = ONEMASK - base[0];
@@ -168,11 +168,11 @@ impl AfftTables {
     	}
 
     	// TODO: What is B anyways?
-    	B[0] = Multiplier(0);
+    	B[0] = Logarithm(0);
     	for i in 0..(FIELD_BITS - 1) {
     		let depart = 1 << i;
     		for j in 0..depart {
-    			B[j + depart] = Multiplier( ((
+    			B[j + depart] = Logarithm( ((
                     B[j].to_wide() + (base[i] as Wide)
                 ) % (ONEMASK as Wide)) as Elt);
     		}

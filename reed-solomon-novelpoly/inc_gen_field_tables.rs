@@ -75,11 +75,11 @@ fn write_field_tables<W: io::Write>(mut w: W) -> io::Result<()> {
 
 	// mem_cpy(&mut log_walsh[..], &log_table[..]);
 	let log_walsh = log_table.clone();
-	let mut log_walsh = unsafe { core::mem::transmute::<_, [Multiplier; FIELD_SIZE]>(log_walsh) };
-	log_walsh[0] = Multiplier(0);
+	let mut log_walsh = unsafe { core::mem::transmute::<_, [Logarithm; FIELD_SIZE]>(log_walsh) };
+	log_walsh[0] = Logarithm(0);
 	walsh(&mut log_walsh[..], FIELD_SIZE);
 
-	write_const(w, "LOG_WALSH", &log_walsh, "[Multiplier; FIELD_SIZE]")?;
+	write_const(w, "LOG_WALSH", &log_walsh, "[Logarithm; FIELD_SIZE]")?;
 	Ok(())
 }
 

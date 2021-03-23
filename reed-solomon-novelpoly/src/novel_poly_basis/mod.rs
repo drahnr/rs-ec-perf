@@ -181,7 +181,7 @@ impl ReedSolomon {
 		};
 
 		// Evaluate error locator polynomial only once
-		let mut error_poly_in_log = [Multiplier(0); FIELD_SIZE];
+		let mut error_poly_in_log = [Logarithm(0); FIELD_SIZE];
 		f2e16::eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
 
 		let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);

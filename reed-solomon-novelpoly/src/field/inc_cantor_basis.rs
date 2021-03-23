@@ -1,6 +1,6 @@
 
 /// Fast Walsh–Hadamard transform over modulo ONEMASK
-pub fn walsh(data: &mut [Multiplier], size: usize) {
+pub fn walsh(data: &mut [Logarithm], size: usize) {
 	let mut depart_no = 1_usize;
 	while depart_no < size {
 		let mut j = 0;
@@ -13,8 +13,8 @@ pub fn walsh(data: &mut [Multiplier], size: usize) {
 				let mask = ONEMASK as Wide;
 				let tmp2: Wide = data[i].to_wide() + mask - data[i + depart_no].to_wide();
 				let tmp1: Wide = data[i].to_wide() + data[i + depart_no].to_wide();
-				data[i] = Multiplier(((tmp1 & mask) + (tmp1 >> FIELD_BITS)) as Elt);
-				data[i + depart_no] = Multiplier(((tmp2 & mask) + (tmp2 >> FIELD_BITS)) as Elt);
+				data[i] = Logarithm(((tmp1 & mask) + (tmp1 >> FIELD_BITS)) as Elt);
+				data[i + depart_no] = Logarithm(((tmp2 & mask) + (tmp2 >> FIELD_BITS)) as Elt);
 			}
 			j += depart_no_next;
 		}

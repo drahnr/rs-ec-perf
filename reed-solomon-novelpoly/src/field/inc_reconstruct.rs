@@ -4,7 +4,7 @@ pub fn reconstruct_sub(
 	erasures: &[bool],
 	n: usize,
 	k: usize,
-	error_poly: &[Multiplier; FIELD_SIZE],
+	error_poly: &[Logarithm; FIELD_SIZE],
 ) -> Result<Vec<u8>> {
 	assert!(is_power_of_2(n), "Algorithm only works for 2^i sizes for N");
 	assert!(is_power_of_2(k), "Algorithm only works for 2^i sizes for K");
@@ -61,7 +61,7 @@ pub fn reconstruct_sub(
 // technically we only need to recover
 // the first `k` instead of all `n` which
 // would include parity chunks.
-pub(crate) fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasure: &[bool], log_walsh2: &[Multiplier], n: usize) {
+pub(crate) fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasure: &[bool], log_walsh2: &[Logarithm], n: usize) {
 	assert_eq!(codeword.len(), n);
 	assert!(n >= recover_up_to);
 	assert_eq!(erasure.len(), n);
@@ -85,23 +85,23 @@ pub(crate) fn decode_main(codeword: &mut [Additive], recover_up_to: usize, erasu
 // Compute the evaluations of the error locator polynomial
 // `fn decode_init`
 // since this has only to be called once per reconstruction
-pub fn eval_error_polynomial(erasure: &[bool], log_walsh2: &mut [Multiplier], n: usize) {
+pub fn eval_error_polynomial(erasure: &[bool], log_walsh2: &mut [Logarithm], n: usize) {
 	let z = std::cmp::min(n, erasure.len());
 	for i in 0..z {
-		log_walsh2[i] = Multiplier(erasure[i] as Elt);
+		log_walsh2[i] = Logarithm(erasure[i] as Elt);
 	}
 	for i in z..n {
-		log_walsh2[i] = Multiplier(0);
+		log_walsh2[i] = Logarithm(0);
 	}
 	walsh(log_walsh2, FIELD_SIZE);
 	for i in 0..n {
 		let tmp = log_walsh2[i].to_wide() * LOG_WALSH[i].to_wide();
-		log_walsh2[i] = Multiplier((tmp % ONEMASK as Wide) as Elt);
+		log_walsh2[i] = Logarithm((tmp % ONEMASK as Wide) as Elt);
 	}
 	walsh(log_walsh2, FIELD_SIZE);
 	for i in 0..z {
 		if erasure[i] {
-			log_walsh2[i] = Multiplier(ONEMASK) - log_walsh2[i];
+			log_walsh2[i] = Logarithm(ONEMASK) - log_walsh2[i];
 		}
 	}
 }

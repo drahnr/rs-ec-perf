@@ -38,7 +38,7 @@ pub const BASE_FINAL: Elt = 230;
 // /// Cantor basis
 // pub const BASE: [Elt; FIELD_BITS] = [1, 214, 152, 146, 86, 200, 88, 230];
 
-include!("inc_log_mul.rs");
+include!("inc_logarithm.rs");
 
 #[cfg(table_bootstrap_complete)]
 include!("inc_afft.rs");

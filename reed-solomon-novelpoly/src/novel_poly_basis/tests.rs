@@ -86,7 +86,7 @@ fn sub_encode_decode() -> Result<()> {
 	let erasures = codewords.iter().map(|x| x.is_none()).collect::<Vec<bool>>();
 
 	// Evaluate error locator polynomial only once
-	let mut error_poly_in_log = [Multiplier(0); FIELD_SIZE];
+	let mut error_poly_in_log = [Logarithm(0); FIELD_SIZE];
 	eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
 
 	let reconstructed = reconstruct_sub(&codewords[..], &erasures[..], N, K, &error_poly_in_log)?;
@@ -139,7 +139,7 @@ fn sub_eq_big_for_small_messages() {
 	let erasures = codewords.iter().map(|x| x.is_none()).collect::<Vec<bool>>();
 
 	// Evaluate error locator polynomial only once
-	let mut error_poly_in_log = [Multiplier(0); FIELD_SIZE];
+	let mut error_poly_in_log = [Logarithm(0); FIELD_SIZE];
 	eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
 
 	let reconstructed_sub = reconstruct_sub(&codewords_sub[..], &erasures[..], N, K, &error_poly_in_log).unwrap();
@@ -302,7 +302,7 @@ fn ported_c_test() {
 	}
 
 	//---------Erasure decoding----------------
-	let mut log_walsh2: [Multiplier; FIELD_SIZE] = [Multiplier(0); FIELD_SIZE];
+	let mut log_walsh2: [Logarithm; FIELD_SIZE] = [Logarithm(0); FIELD_SIZE];
 
 	f2e16::eval_error_polynomial(&erasure[..], &mut log_walsh2[..], FIELD_SIZE);
 

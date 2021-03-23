@@ -1,12 +1,9 @@
 #[cfg(table_bootstrap_complete)]
 use super::*;
 
-decl_field!("f256", bits = 8);
-
 pub type Elt = u8;
 pub type Wide = u16;
-
-pub const ONEMASK: Elt = (FIELD_SIZE - 1) as Elt;
+decl_field_additive!("f256", bits = 8);
 
 /// Quotient ideal generator given by tail of irreducible polynomial
 // Valid Cantor basis, passes embedded_gf16

@@ -3,7 +3,7 @@
 use std::io;
 
 include!("src/util.rs");
-include!("src/field/gen.rs");
+include!("src/field/traits.rs");
 
 mod f2e16 {
 	include!("inc_gen_field_tables.rs");

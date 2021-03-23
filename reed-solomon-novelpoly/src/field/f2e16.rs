@@ -1,12 +1,9 @@
 #[cfg(table_bootstrap_complete)]
 use super::*;
 
-decl_field!("f2e16", bits = 16);
-
 pub type Elt = u16;
 pub type Wide = u32;
-
-pub const ONEMASK: Elt = (FIELD_SIZE - 1) as Elt;
+decl_field_additive!("f2e16", bits = 16);
 
 /// Quotient ideal generator given by tail of irreducible polynomial
 pub const GENERATOR: Elt = 0x2D; // x^16 + x^5 + x^3 + x^2 + 1
@@ -45,4 +42,28 @@ fn embedded_gf256() {
             assert!(j.mul(i).0 & mask == 0);
         }
     }    
+}
+
+
+#[test]
+fn flt_roundtrip_small() {
+	const N: usize = 16;
+	const EXPECTED: [Additive; N] =
+		unsafe { std::mem::transmute([1_u16, 2, 3, 5, 8, 13, 21, 44, 65, 0, 0xFFFF, 2, 3, 5, 7, 11]) };
+
+	let mut data = EXPECTED.clone();
+
+	afft(&mut data, N, N / 4);
+
+    /*
+	println!("novel basis(rust):");
+	data.iter().for_each(|sym| {
+		print!(" {:04X}", sym.0);
+	});
+	println!("");
+    */
+
+	inverse_afft(&mut data, N, N / 4);
+
+    assert_eq!(data, EXPECTED);
 }

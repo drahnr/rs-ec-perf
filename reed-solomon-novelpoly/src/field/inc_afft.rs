@@ -1,41 +1,31 @@
 
+
 use static_init::{dynamic};
 
-#[dynamic(0)]
-pub static AFFT: AdditiveFFT = AdditiveFFT::initalize();
+// use core::ops::Mul;
 
-/// Additive FFT and inverse in the "novel polynomial basis"
+use super::afft::*;
+
+
+#[dynamic(0)]
+pub static AFFT_TABLES: AfftTables = AfftTables::initalize();
+
+/// Additive FFT and IFFT skew table and formal derivative transform table
+/// for computing Reed-Solomon in the "novel polynomial basis".
 #[allow(non_snake_case)]
-pub struct AdditiveFFT {
-    /// Multiplier form of twisted factors used in AdditiveFFT
+pub struct AfftTables {
+    /// Multiplier form of twisted factors used in our additive FFT
     pub skews: [Multiplier; ONEMASK as usize], // skew_multiplier
     /// Factors used in formal derivative, actually all zero if field was constructed correctly.
     pub B: [Multiplier; FIELD_SIZE >> 1],
 }
 
 
-/// Formal derivative of polynomial in the new?? basis
-pub fn formal_derivative(cos: &mut [Additive], size: usize) {
-	for i in 1..size {
-		let length = ((i ^ i - 1) + 1) >> 1;
-		for j in (i - length)..i {
-			cos[j] ^= cos.get(j + length).copied().unwrap_or_default();
-		}
-	}
-	let mut i = size;
-	while i < FIELD_SIZE && i < cos.len() {
-		for j in 0..size {
-			cos[j] ^= cos.get(j + i).copied().unwrap_or_default();
-		}
-		i <<= 1;
-	}
-}
-
 /// Formal derivative of polynomial in tweaked?? basis
 #[allow(non_snake_case)]
 pub fn tweaked_formal_derivative(codeword: &mut [Additive], n: usize) {
     #[cfg(b_is_not_one)]
-    let B = unsafe { &AFFT.B };
+    let B = unsafe { &AFFT_TABLES.B };
 
     // We change nothing when multiplying by b from B.
 	#[cfg(b_is_not_one)]
@@ -62,7 +52,7 @@ pub fn tweaked_formal_derivative(codeword: &mut [Additive], n: usize) {
 #[allow(non_snake_case)]
 #[test]
 fn b_is_one() {
-    let B = unsafe { &AFFT.B };
+    let B = unsafe { &AFFT_TABLES.B };
     fn test_b(b: Multiplier) {
         for x in 0..FIELD_SIZE {
             let x = Additive(x as Elt);
@@ -81,162 +71,33 @@ fn b_is_one() {
 }
 
 
-// We want the low rate scheme given in
-// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
-// and https://github.com/catid/leopard/blob/master/docs/LowRateDecoder.pdf
-// but this code resembles https://github.com/catid/leopard which
-// implements the high rate decoder in
-// https://github.com/catid/leopard/blob/master/docs/HighRateDecoder.pdf
-// We're hunting for the differences and trying to undersrtand the algorithm.
+impl AfftField for Additive {
+    type Multiplier = Multiplier;
 
-/// Inverse additive FFT in the "novel polynomial basis"
-pub fn inverse_afft(data: &mut [Additive], size: usize, index: usize) {
-    unsafe { &AFFT }.inverse_afft(data,size,index)
-}
-
-/// Additive FFT in the "novel polynomial basis"
-pub fn afft(data: &mut [Additive], size: usize, index: usize) {
-    unsafe { &AFFT }.afft(data,size,index)
-}
-
-
-impl AdditiveFFT {
     #[inline(always)]
-    pub fn compute_skew(&self, depart_no: usize, j: usize, index: usize) -> Multiplier {
-        let i = (j+index) >> depart_no.trailing_zeros();
-        debug_assert_eq!(i, (j+index)/depart_no);
-        let skew = Additive((i - 1) as Elt).to_multiplier();
-        // let skew = self.skews[j + index - 1];
+    fn compute_skew(_depart_no: usize, j: usize, index: usize) -> Option<Self::Multiplier> {
+        // let i = (j+index) >> depart_no.trailing_zeros();
+        // debug_assert_eq!(i, (j+index)/depart_no);
+        // let new_skew = Additive((i - 1) as Elt).to_multiplier();
+        let old_skew = unsafe { &AFFT_TABLES }.skews[j + index - 1];
         // Actually this does not yet work, indicating a mistake
         /*
         use core::any::TypeId;
-        debug_assert!(
-            TypeId::of::<Elt>() != TypeId::of::<u8>() ||
-            skew == self.skews[j + index - 1] 
-        );
+        debug_assert!( TypeId::of::<Elt>() != TypeId::of::<u8>() || new_skew == old_skew );
         */
-        skew
+
+		// It's reasonale to skip the loop if skew is zero, but doing so with
+		// all bits set requires justification.	 (TODO)
+		if old_skew.0 != ONEMASK { Some(old_skew) } else { None }
     }
+}
 
-    /// Inverse additive FFT in the "novel polynomial basis"
-    pub fn inverse_afft(&self, data: &mut [Additive], size: usize, index: usize) {
-    	// All line references to Algorithm 2 page 6288 of
-    	// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
 
-    	// Depth of the recursion on line 7 and 8 is given by depart_no
-    	// aka 1 << ((k of Algorithm 2) - (i of Algorithm 2)) where
-    	// k of Algorithm 1 is read as FIELD_BITS here.
-    	// Recusion base layer implicitly imports d_r aka ala line 1.
-    	// After this, we start at depth (i of Algorithm 2) = (k of Algorithm 2) - 1
-    	// and progress through FIELD_BITS-1 steps, obtaining \Psi_\beta(0,0).
-    	let mut depart_no = 1_usize;
-    	while depart_no < size {
-    		// Agrees with for loop (j of Algorithm 2) in (0..2^{k-i-1}) from line 3,
-    		// except we've j in (depart_no..size).step_by(2*depart_no), meaning
-    		// the doubled step compensated for the halve size exponent, and
-    		// somehow this j captures the subscript on \omega_{j 2^{i+1}}.	 (TODO)
-    		let mut j = depart_no;
-    		while j < size {
-    			// At this point loops over i in (j - depart_no)..j give a bredth
-    			// first loop across the recursion branches from lines 7 and 8,
-    			// so the i loop corresponds to r in Algorithm 2.  In fact,
-    			// data[i] and data[i + depart_no] together cover everything,
-    			// thanks to the outer j loop.
-
-    			// Loop on line 3, so i corresponds to j in Algorithm 2
-    			for i in (j - depart_no)..j {
-    				// Line 4, justified by (34) page 6288, but
-    				// adding depart_no acts like the r+2^i superscript.
-    				data[i + depart_no] ^= data[i];
-    			}
-
-    			// Algorithm 2 indexs the skew factor in line 5 page 6288
-    			// by i and \omega_{j 2^{i+1}}, but not by r explicitly.
-    			// We further explore this confusion below. (TODO)
-    			let skew = self.compute_skew(depart_no,j,index);
-    			// It's reasonale to skip the loop if skew is zero, but doing so with
-    			// all bits set requires justification.	 (TODO)
-    			if skew.0 != ONEMASK {
-    				// Again loop on line 3, except skew should depend upon i aka j in Algorithm 2 (TODO)
-    				for i in (j - depart_no)..j {
-    					// Line 5, justified by (35) page 6288, but
-    					// adding depart_no acts like the r+2^i superscript.
-    					data[i] ^= data[i + depart_no].mul(skew);
-    				}
-    			}
-
-    			// Increment by double depart_no in agreement with
-    			// our updating 2*depart_no elements at this depth.
-    			j += depart_no << 1;
-    		}
-    		depart_no <<= 1;
-    	}
-    }
-
-    /// Additive FFT in the "novel polynomial basis"
-    pub fn afft(&self, data: &mut [Additive], size: usize, index: usize) {
-    	// All line references to Algorithm 1 page 6287 of
-    	// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
-
-    	// Depth of the recursion on line 3 and 4 is given by depart_no
-    	// aka 1 << ((k of Algorithm 1) - (i of Algorithm 1)) where
-    	// k of Algorithm 1 is read as FIELD_BITS here.
-    	// Recusion base layer implicitly imports d_r aka ala line 1.
-    	// After this, we start at depth (i of Algorithm 1) = (k of Algorithm 1) - 1
-    	// and progress through FIELD_BITS-1 steps, obtaining \Psi_\beta(0,0).
-    	let mut depart_no = size >> 1_usize;
-    	while depart_no > 0 {
-    		// Agrees with for loop (j of Algorithm 1) in (0..2^{k-i-1}) from line 5,
-    		// except we've j in (depart_no..size).step_by(2*depart_no), meaning
-    		// the doubled step compensated for the halve size exponent, and
-    		// somehow this j captures the subscript on \omega_{j 2^{i+1}}.	 (TODO)
-    		let mut j = depart_no;
-    		while j < size {
-    			// At this point loops over i in (j - depart_no)..j give a bredth
-    			// first loop across the recursion branches from lines 3 and 4,
-    			// so the i loop corresponds to r in Algorithm 1.  In fact,
-    			// data[i] and data[i + depart_no] together cover everything,
-    			// thanks to the outer j loop.
-
-    			// Algorithm 1 indexs the skew factor in line 6 aka (28) page 6287
-    			// by i and \omega_{j 2^{i+1}}, but not by r explicitly.
-    			// We doubt the lack of explicit dependence upon r justifies
-    			// extracting the skew factor outside the loop here.
-    			// As indexing by \omega_{j 2^{i+1}} appears absolute elsewhere,
-    			// we think r actually appears but the skew factor repeats itself
-    			// like in (19) in the proof of Lemma 4.  (TODO)
-    			// We should understand the rest of this basis story, like (8) too.	 (TODO)
-    			let skew = self.compute_skew(depart_no,j,index);
-    			// It's reasonale to skip the loop if skew is zero, but doing so with
-    			// all bits set requires justification.	 (TODO)
-    			if skew.0 != ONEMASK {
-    				// Loop on line 5, except skew should depend upon i aka j in Algorithm 1 (TODO)
-    				for i in (j - depart_no)..j {
-    					// Line 6, explained by (28) page 6287, but
-    					// adding depart_no acts like the r+2^i superscript.
-    					data[i] ^= data[i + depart_no].mul(skew);
-    				}
-    			}
-
-    			// Again loop on line 5, so i corresponds to j in Algorithm 1
-    			for i in (j - depart_no)..j {
-    				// Line 7, explained by (31) page 6287, but
-    				// adding depart_no acts like the r+2^i superscript.
-    				data[i + depart_no] ^= data[i];
-    			}
-
-    			// Increment by double depart_no in agreement with
-    			// our updating 2*depart_no elements at this depth.
-    			j += depart_no << 1;
-    		}
-    		depart_no >>= 1;
-    	}
-    }
-
+impl AfftTables {
 
     /// Initialize SKEW_FACTOR and B
     #[allow(non_snake_case)]
-    fn initalize() -> AdditiveFFT {
+    fn initalize() -> AfftTables {
         // We cannot yet identify if base has an additive or multiplicative
         // representation, or mybe something else entirely.  (TODO)
     	let mut base: [Elt; FIELD_BITS - 1] = Default::default();
@@ -317,15 +178,14 @@ impl AdditiveFFT {
     		}
     	}
 
-        AdditiveFFT {
+        AfftTables {
             // skews_additive,
             skews: skews_multiplier,
 			B,
         }
     }
 
-}
-
+} // impl AdditiveFFT
 
 #[test]
 fn flt_back_and_forth() {

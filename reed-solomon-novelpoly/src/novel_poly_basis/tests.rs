@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::field::f2e16;
+use crate::field::{f2e16};
 use crate::WrappedShard;
 use assert_matches::assert_matches;
 use rand::distributions::Uniform;
@@ -239,25 +239,6 @@ simplicissimus!(case_3: validators: 4, payload: 100);
 // Way more validators than payload bytes
 simplicissimus!(case_4: validators: 2003, payload: 17);
 
-#[test]
-fn flt_roundtrip_small() {
-	const N: usize = 16;
-	const EXPECTED: [Additive; N] =
-		unsafe { std::mem::transmute([1_u16, 2, 3, 5, 8, 13, 21, 44, 65, 0, 0xFFFF, 2, 3, 5, 7, 11]) };
-
-	let mut data = EXPECTED.clone();
-
-	f2e16::afft(&mut data, N, N / 4);
-
-	println!("novel basis(rust):");
-	data.iter().for_each(|sym| {
-		print!(" {:04X}", sym.0);
-	});
-	println!("");
-
-	f2e16::inverse_afft(&mut data, N, N / 4);
-	itertools::assert_equal(data.iter(), EXPECTED.iter());
-}
 
 #[test]
 fn ported_c_test() {

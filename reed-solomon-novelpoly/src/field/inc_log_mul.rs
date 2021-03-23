@@ -3,6 +3,21 @@ pub use core::ops::{Mul, MulAssign};
 
 include!("inc_cantor_basis.rs");
 
+/// Multiplicaiton friendly LOG form of f2e16
+#[derive(Clone, Copy, Debug, Add, AddAssign, Sub, SubAssign, PartialEq, Eq)] // Default, PartialOrd,Ord
+pub struct Multiplier(pub Elt);
+
+impl Multiplier {
+    #[inline(always)]
+	pub fn to_wide(self) -> Wide {
+		self.0 as Wide
+	}
+    #[inline(always)]
+	pub fn from_wide(x: Wide) -> Multiplier {
+		Multiplier(x as Elt)
+	}
+}
+
 impl Mul<Multiplier> for Additive {
     type Output = Additive;
 
@@ -46,21 +61,6 @@ impl FieldMul<Multiplier> for Additive {
 	}
 }
 
-
-/// Multiplicaiton friendly LOG form of f2e16
-#[derive(Clone, Copy, Debug, Add, AddAssign, Sub, SubAssign, PartialEq, Eq)] // Default, PartialOrd,Ord
-pub struct Multiplier(pub Elt);
-
-impl Multiplier {
-    #[inline(always)]
-	pub fn to_wide(self) -> Wide {
-		self.0 as Wide
-	}
-    #[inline(always)]
-	pub fn from_wide(x: Wide) -> Multiplier {
-		Multiplier(x as Elt)
-	}
-}
 
 
 /*

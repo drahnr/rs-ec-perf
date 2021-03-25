@@ -18,6 +18,22 @@ impl Logarithm {
 	}
 }
 
+impl Mul<Logarithm> for Logarithm {
+    type Output = Additive;
+
+	/// TODO:  Leaky abstraction!  Return a*EXP_TABLE[b] over GF(2^r)
+    #[inline(always)]
+    #[cfg(table_bootstrap_complete)]
+    fn mul(self, other: Logarithm) -> Additive {
+		let log = self.0 as Wide + other.0 as Wide;
+		let offset = (log & ONEMASK as Wide) + (log >> FIELD_BITS);
+		Additive(EXP_TABLE[offset as usize])
+    }
+
+    #[cfg(not(table_bootstrap_complete))]
+    fn mul(self, other: Logarithm) -> Additive { panic!(); }
+}
+
 impl Mul<Logarithm> for Additive {
     type Output = Additive;
 
@@ -28,9 +44,7 @@ impl Mul<Logarithm> for Additive {
 		if self == Self::ZERO {
 			return Self::ZERO;
 		}
-		let log = (LOG_TABLE[self.0 as usize] as Wide) + other.0 as Wide;
-		let offset = (log & ONEMASK as Wide) + (log >> FIELD_BITS);
-		Additive(EXP_TABLE[offset as usize])
+        self.to_multiplier() * other
     }
 
     #[cfg(not(table_bootstrap_complete))]

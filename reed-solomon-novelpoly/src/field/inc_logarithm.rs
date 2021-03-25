@@ -26,6 +26,7 @@ impl Mul<Logarithm> for Logarithm {
     #[cfg(table_bootstrap_complete)]
     fn mul(self, other: Logarithm) -> Additive {
 		let log = self.0 as Wide + other.0 as Wide;
+        // Compute sum of logarithms modulo 2^FIELD_BITS-1 perhaps? 
 		let offset = (log & ONEMASK as Wide) + (log >> FIELD_BITS);
 		Additive(EXP_TABLE[offset as usize])
     }

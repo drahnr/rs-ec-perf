@@ -37,7 +37,7 @@ fn embedded_gf256() {
     let mask: Elt = !0xFF;
     for i in 1..=255 {
         let i = Additive(i as Elt).to_multiplier();
-        for j in 0..16 {
+        for j in 0..256 {
             let j = Additive(j as Elt);
             assert!(j.mul(i).0 & mask == 0);
         }

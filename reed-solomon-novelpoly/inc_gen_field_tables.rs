@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use fs_err as fs;
 
 /// Write Rust `const` declaration
-pub fn write_const<W, T>(mut w: W, name: &str, value: &T, type_name: &str) -> io::Result<()>
+pub fn write_static<W, T>(mut w: W, name: &str, value: &T, type_name: &str) -> io::Result<()>
 where
 	W: io::Write,
 	T: fmt::Debug,
@@ -13,7 +13,6 @@ where
 	writeln!(w, r###"#[allow(unused)]
 pub(crate) static {}: {} = {:#?};"###, name, type_name, value)
 }
-
 
 
 /// Compute tables determined solely by the field, which never depend
@@ -68,10 +67,10 @@ fn write_field_tables<W: io::Write>(mut w: W) -> io::Result<()> {
 	}
 	exp_table[ONEMASK as usize] = exp_table[0];
 
-	write_const(&mut w, "BASE", &base, "[Elt; FIELD_BITS]") ?;
+	write_static(&mut w, "BASE", &base, "[Elt; FIELD_BITS]") ?;
 
-	write_const(&mut w, "LOG_TABLE", &log_table, "[Elt; FIELD_SIZE]") ?;
-	write_const(&mut w, "EXP_TABLE", &exp_table, "[Elt; FIELD_SIZE]") ?;
+	write_static(&mut w, "LOG_TABLE", &log_table, "[Elt; FIELD_SIZE]") ?;
+	write_static(&mut w, "EXP_TABLE", &exp_table, "[Elt; FIELD_SIZE]") ?;
 
 	// mem_cpy(&mut log_walsh[..], &log_table[..]);
 	let log_walsh = log_table.clone();
@@ -79,7 +78,7 @@ fn write_field_tables<W: io::Write>(mut w: W) -> io::Result<()> {
 	log_walsh[0] = Logarithm(0);
 	walsh(&mut log_walsh[..], FIELD_SIZE);
 
-	write_const(w, "LOG_WALSH", &log_walsh, "[Logarithm; FIELD_SIZE]")?;
+	write_static(w, "LOG_WALSH", &log_walsh, "[Logarithm; FIELD_SIZE]")?;
 	Ok(())
 }
 

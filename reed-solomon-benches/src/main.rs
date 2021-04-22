@@ -20,12 +20,7 @@ fn main() -> Result<()> {
 	#[cfg(feature = "novelpoly-with-alt-cxx-impl")]
 	{
 		use reed_solomon_benches::novelpoly;
-		reed_solomon_tester::roundtrip(
-			novelpoly::cxx::encode,
-			novelpoly::cxx::reconstruct,
-			&BYTES[..],
-			N_SHARDS,
-		)?;
+		reed_solomon_tester::roundtrip(novelpoly::cxx::encode, novelpoly::cxx::reconstruct, &BYTES[..], N_SHARDS)?;
 	}
 
 	#[cfg(feature = "naive")]

@@ -457,7 +457,7 @@ jobs:
                   rustc +stable --version --verbose
 
                   cargo-flamegraph --version
-                  cargo flamegraph --bin reed-solomon-benches
+                  cargo flamegraph -v -F 10000 --bin reed-solomon-benches
 
                   mv flamegraph.svg ../flamegraph/flamegraph-$(git rev-parse HEAD).svg
 

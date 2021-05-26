@@ -24,12 +24,6 @@ include!("inc_logarithm.rs");
 #[cfg(table_bootstrap_complete)]
 include!("inc_afft.rs");
 
-#[cfg(table_bootstrap_complete)]
-include!("inc_encode.rs");
-
-#[cfg(table_bootstrap_complete)]
-include!("inc_reconstruct.rs");
-
 
 #[test]
 fn embedded_gf256() {

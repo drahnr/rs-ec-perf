@@ -10,6 +10,9 @@ use rand::seq::index::IndexVec;
 use rand::thread_rng;
 use reed_solomon_tester::*;
 
+use crate::novel_poly_basis::ReedSolomon;
+use crate::novel_poly_basis::reconstruct;
+
 /// Generate a random index
 fn rand_gf_element() -> Additive {
 	let mut rng = thread_rng();
@@ -73,7 +76,7 @@ fn sub_encode_decode() -> Result<()> {
 	let mut data = [0u8; K2];
 	rng.fill_bytes(&mut data[..]);
 
-	let codewords = encode_sub(&data, N, K)?;
+	let codewords = ReedSolomon::encode_sub(&data, N, K)?;
 	let mut codewords = codewords.into_iter().map(|x| Some(x)).collect::<Vec<_>>();
 	assert_eq!(codewords.len(), N);
 	codewords[0] = None;
@@ -87,9 +90,9 @@ fn sub_encode_decode() -> Result<()> {
 
 	// Evaluate error locator polynomial only once
 	let mut error_poly_in_log = [Logarithm(0); FIELD_SIZE];
-	eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
+	ReedSolomon::eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
 
-	let reconstructed = reconstruct_sub(&codewords[..], &erasures[..], N, K, &error_poly_in_log)?;
+	let reconstructed = ReedSolomon::reconstruct_sub(&codewords[..], &erasures[..], N, K, &error_poly_in_log)?;
 	itertools::assert_equal(data.iter(), reconstructed.iter().take(K2));
 	Ok(())
 }
@@ -124,7 +127,7 @@ fn sub_eq_big_for_small_messages() {
 	};
 
 	let mut codewords = encode(&data, rs.n).unwrap();
-	let mut codewords_sub = encode_sub(&data, N, K).unwrap();
+	let mut codewords_sub = ReedSolomon::encode_sub(&data, N, K).unwrap();
 
 	itertools::assert_equal(codewords.iter().map(wrapped_shard_len1_as_gf_sym), codewords_sub.iter().copied());
 
@@ -140,10 +143,10 @@ fn sub_eq_big_for_small_messages() {
 
 	// Evaluate error locator polynomial only once
 	let mut error_poly_in_log = [Logarithm(0); FIELD_SIZE];
-	eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
+	ReedSolomon::eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
 
-	let reconstructed_sub = reconstruct_sub(&codewords_sub[..], &erasures[..], N, K, &error_poly_in_log).unwrap();
-	let reconstructed = reconstruct(codewords, rs.n).unwrap();
+	let reconstructed_sub = ReedSolomon::reconstruct_sub(&codewords_sub[..], &erasures[..], N, K, &error_poly_in_log).unwrap();
+	let reconstructed = reconstruct::reconstruct(codewords, rs.n).unwrap();
 	itertools::assert_equal(reconstructed.iter().take(K2), reconstructed_sub.iter().take(K2));
 	itertools::assert_equal(reconstructed.iter().take(K2), data.iter());
 	itertools::assert_equal(reconstructed_sub.iter().take(K2), data.iter());
@@ -268,9 +271,9 @@ fn ported_c_test() {
 
 	if K + K > N && false {
 		let (data_till_t, data_skip_t) = data.split_at_mut(N - K);
-		f2e16::encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
+		ReedSolomon::encode_high(data_skip_t, K, data_till_t, &mut codeword[..], N);
 	} else {
-		f2e16::encode_low(&data[..], K, &mut codeword[..], N);
+		ReedSolomon::encode_low(&data[..], K, &mut codeword[..], N);
 	}
 
 	// println!("Codeword:");
@@ -304,12 +307,12 @@ fn ported_c_test() {
 	//---------Erasure decoding----------------
 	let mut log_walsh2: [Logarithm; FIELD_SIZE] = [Logarithm(0); FIELD_SIZE];
 
-	f2e16::eval_error_polynomial(&erasure[..], &mut log_walsh2[..], FIELD_SIZE);
+	ReedSolomon::eval_error_polynomial(&erasure[..], &mut log_walsh2[..], FIELD_SIZE);
 
 	// TODO: Make print_sha256 polymorphic
 	// print_sha256("log_walsh2", &log_walsh2);
 
-	f2e16::decode_main(&mut codeword[..], K, &erasure[..], &log_walsh2[..], N);
+	ReedSolomon::decode_main(&mut codeword[..], K, &erasure[..], &log_walsh2[..], N);
 
 	println!("Decoded result:");
 	for i in 0..N {

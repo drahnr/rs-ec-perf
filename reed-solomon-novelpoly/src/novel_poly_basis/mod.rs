@@ -5,35 +5,38 @@
 // Lin, Han and Chung, "Novel Polynomial Basis and Its Application to Reed-Solomon Erasure Codes," FOCS14.
 // (http://arxiv.org/abs/1404.3458)
 
+use std::marker::PhantomData;
+
 use crate::errors::*;
 use crate::f2e16::*;
 use crate::Shard;
 use crate::field::afft::*;
 
-mod encode;
-mod reconstruct;
-
-pub use self::encode::*;
-pub use self::reconstruct::*;
 pub use super::util::*;
 
 use super::field::f2e16;
 
+/// each shard contains one symbol of one run of erasure coding
+pub fn reconstruct<'a, S: Shard>(received_shards: Vec<Option<S>>, validator_count: usize) -> Result<Vec<u8>> {
+	let rs : ReedSolomon<f2e16::Additive> = ErasureCodeFactory::make_encoder(validator_count, recoverablity_subset_size(validator_count))?;
+
+	rs.reconstruct(received_shards)
+}
+
+pub fn encode<S: Shard>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
+	let rs : ReedSolomon<f2e16::Additive> = ErasureCodeFactory::make_encoder(validator_count, recoverablity_subset_size(validator_count))?;
+
+	rs.encode::<S>(bytes)
+}
+
 /// Params for the encoder / decoder
 /// derived from a target validator count.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CodeParams {
-	/// total number of message symbols to send
-	/// Invariant is a power of base 2
-	n: usize,
-	/// number of information containing chunks
-	/// Invariant is a power of base 2, `k < n`
-	k: usize,
-	/// Avoid copying unnecessary chunks.
-	wanted_n: usize,
+pub struct ErasureCodeFactory<F: AfftField> {
+    _marker: PhantomData<F>,
 }
 
-impl CodeParams {
+impl <F: AfftField> ErasureCodeFactory<F> {
 	/// Create a new reed solomon erasure encoding wrapper
 	/// `k` the intended number of data shards needed to recover.
 	/// `n` the intended number of resulting shards.
@@ -41,7 +44,7 @@ impl CodeParams {
 	/// Assures that the derived paramters retain at most the given coding
 	/// rate, and as such assure recoverability with at least an equiv fraction
 	/// as provided by the input `n`, and `k` parameterset.
-	pub fn derive_parameters(n: usize, k: usize) -> Result<Self> {
+	pub fn make_encoder(n: usize, k: usize) -> Result<ReedSolomon<F>> {
 		if n < 2 {
 			return Err(Error::WantedShardCountTooLow(n));
 		}
@@ -58,23 +61,26 @@ impl CodeParams {
 		if n_po2 > FIELD_SIZE as usize {
 			return Err(Error::WantedShardCountTooHigh(n));
 		}
-		Ok(Self { n: n_po2, k: k_po2, wanted_n: n })
-	}
 
-	// make a reed-solomon instance.
-	pub fn make_encoder(&self) -> ReedSolomon {
-		ReedSolomon::new(self.n, self.k, self.wanted_n)
-			.expect("this struct is not created with invalid shard number; qed")
+	    // make a reed-solomon instance.
+		Ok(ReedSolomon::new(n_po2, k_po2, n)
+			.expect("this struct is not created with invalid shard number; qed"))		
 	}
 }
 
-pub struct ReedSolomon {
-	n: usize,
-	k: usize,
+pub struct ReedSolomon<F: AfftField> {
+	/// Avoid copying unnecessary chunks.
 	wanted_n: usize,
+	/// total number of message symbols to send
+	/// Invariant is a power of base 2
+	n: usize,
+	/// number of information containing chunks
+	/// Invariant is a power of base 2, `k < n`
+	k: usize,
+    _marker: PhantomData<F>,
 }
 
-impl ReedSolomon {
+impl <F:AfftField> ReedSolomon<F> {
 	/// Returns the size per shard in bytes
 	pub fn shard_len(&self, payload_size: usize) -> usize {
 		let payload_symbols = (payload_size + 1) / 2;
@@ -87,7 +93,7 @@ impl ReedSolomon {
 		if !is_power_of_2(n) && !is_power_of_2(k) {
 			Err(Error::ParamterMustBePowerOf2 { n, k })
 		} else {
-			Ok(Self { wanted_n, n, k })
+			Ok(Self { wanted_n, n, k, _marker: PhantomData })
 		}
 	}
 

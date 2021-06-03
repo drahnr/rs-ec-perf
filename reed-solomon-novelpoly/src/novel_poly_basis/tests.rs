@@ -146,7 +146,7 @@ fn sub_eq_big_for_small_messages() {
 	ReedSolomon::eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
 
 	let reconstructed_sub = ReedSolomon::reconstruct_sub(&codewords_sub[..], &erasures[..], N, K, &error_poly_in_log).unwrap();
-	let reconstructed = reconstruct::reconstruct(codewords, rs.n).unwrap();
+	let reconstructed = reconstruct(codewords, rs.n).unwrap();
 	itertools::assert_equal(reconstructed.iter().take(K2), reconstructed_sub.iter().take(K2));
 	itertools::assert_equal(reconstructed.iter().take(K2), data.iter());
 	itertools::assert_equal(reconstructed_sub.iter().take(K2), data.iter());

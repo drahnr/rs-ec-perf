@@ -1,4 +1,6 @@
 #![forbid(unused_crate_dependencies)]
+#![feature(const_generics)]
+#![feature(const_evaluatable_checked)]
 
 pub mod errors;
 pub use errors::*;

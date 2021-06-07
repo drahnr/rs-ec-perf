@@ -190,7 +190,8 @@ impl <F:AfftField> ReedSolomon<F> {
 		};
 
 		// Evaluate error locator polynomial only once
-		let mut error_poly_in_log = [Logarithm(0); F::FIELD_SIZE];
+		//let mut error_poly_in_log = [Logarithm(0); F::FIELD_SIZE];
+        let mut error_poly_in_log = vec![Logarithm(0); F::FIELD_SIZE];
 		self.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
 
 		let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);
@@ -330,7 +331,8 @@ impl <F:AfftField> ReedSolomon<F> {
         &self,
 	    codewords: &[Option<Additive>],
 	    erasures: &[bool],
-	    error_poly: &[Logarithm; F::FIELD_SIZE],
+        error_poly: &[Logarithm],
+	    //error_poly: &[Logarithm; F::FIELD_SIZE],
     ) -> Result<Vec<u8>> {
 	    assert!(is_power_of_2(self.n), "Algorithm only works for 2^i sizes for N");
 	assert!(is_power_of_2(self.k), "Algorithm only works for 2^i sizes for K");

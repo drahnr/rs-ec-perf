@@ -131,10 +131,10 @@ impl <F: AfftField> ReedSolomon<F> {
 			assert!(data_piece.len() <= k2);
 			let encoding_run = self.encode_sub(data_piece)?;
 			for val_idx in 0..validator_count {
-				AsMut::<[[u8; 2]]>::as_mut(&mut shards[val_idx])[chunk_idx] = encoding_run[val_idx] as [u8; 2];
+				 shards[val_idx].set_chunk(chunk_idx, AsRef::<F::ElementAsBytes>::as_ref(&encoding_run[val_idx]));
 			}
 		}
-
+&mut
 		Ok(shards)
 	}
 

@@ -7,7 +7,7 @@ pub trait FieldAdd :
     + PartialEq<Self> + Eq
     + BitXor<Self, Output=Self> + BitXorAssign<Self>
 {
-    type Element;
+    type ElementAsBytes;
 	const FIELD_BITS: usize;
     const FIELD_BYTES: usize = Self::FIELD_BITS / 8;
 	const FIELD_SIZE: usize = 1_usize << Self::FIELD_BITS;
@@ -52,7 +52,7 @@ macro_rules! decl_field_additive {
         pub struct Additive(pub Elt);
 
         impl FieldAdd for Additive {
-            type Element = [u8; $fbits / 8];
+            type ElementAsBytes = [u8; $fbits / 8];
             
         	const FIELD_BITS: usize = $fbits;
         	const ZERO: Additive = Additive(0);
@@ -63,6 +63,8 @@ macro_rules! decl_field_additive {
             // }
         }
 
+        impl AsRef<ElementAsBytes> for ElementAsBytes {
+        }
         impl Additive {
             #[inline(always)]
         	pub fn to_wide(self) -> Wide {

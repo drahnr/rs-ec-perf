@@ -7,8 +7,9 @@ use crate::field::FieldAdd;
 //     where [(); <F as FieldAdd>::FIELD_BYTES]: Sized
 
 pub trait Shard<F: FieldAdd>:
-Clone + AsRef<[u8]> + AsMut<[u8]> + AsMut<[F::Element]> + AsRef<F::Element> + iter::FromIterator<F::Element> + From<Vec<u8>>
-//    where F::Element : Sized
+Clone + AsRef<[u8]> + AsMut<[u8]> + AsMut<[[u8; F::FIELD_BYTES]]> + AsRef<F::Element> + iter::FromIterator<F::Element> + From<Vec<u8>>
+where
+	[u8; F::FIELD_BYTES]: Sized,
 {
   	type Inner;
   	fn into_inner(self) -> Self::Inner;

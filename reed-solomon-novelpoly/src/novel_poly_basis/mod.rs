@@ -46,7 +46,10 @@ pub struct ReedSolomon<F: AfftField> {
     _marker: PhantomData<*const F>,
 }
 
-impl <F: AfftField> ReedSolomon<F> {
+impl <F: AfftField> ReedSolomon<F>
+where
+	[u8; F::FIELD_BYTES]: Sized,
+{
 
     /// Returns the total number of data shard
     /// consumed by the code. That is equal the total number of symbols

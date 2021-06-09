@@ -11,6 +11,7 @@ use crate::errors::*;
 use crate::f2e16::*;
 use crate::Shard;
 use crate::field::afft::*;
+use crate::field::FieldAdd;
 
 pub use super::util::*;
 
@@ -46,7 +47,10 @@ pub struct ReedSolomon<F: AfftField> {
     _marker: PhantomData<*const F>,
 }
 
-impl <F: AfftField> ReedSolomon<F> {
+impl <F: AfftField> ReedSolomon<F>
+where
+	[u8; F::FIELD_BYTES]: Sized,
+{
 
     /// Returns the total number of data shard
     /// consumed by the code. That is equal the total number of symbols
@@ -99,7 +103,7 @@ impl <F: AfftField> ReedSolomon<F> {
 	    Ok(Self { wanted_n: n, n: n_po2, k: k_po2, _marker: PhantomData})
 	}
 
-	pub fn encode<S: Shard<F>>(&self, bytes: &[u8]) -> Result<Vec<S>> {
+	pub fn encode<S: Shard<Additive>>(&self, bytes: &[u8]) -> Result<Vec<S>> {
 		if bytes.is_empty() {
 			return Err(Error::PayloadSizeIsZero);
 		}
@@ -131,10 +135,9 @@ impl <F: AfftField> ReedSolomon<F> {
 			assert!(data_piece.len() <= k2);
 			let encoding_run = self.encode_sub(data_piece)?;
 			for val_idx in 0..validator_count {
-				 shards[val_idx].set_chunk(chunk_idx, AsRef::<F::ElementAsBytes>::as_ref(&encoding_run[val_idx]));
+				shards[val_idx].set_chunk(chunk_idx, AsRef::<[u8; <Additive as FieldAdd>::FIELD_BYTES]>::as_ref(&encoding_run[val_idx]));
 			}
 		}
-&mut
 		Ok(shards)
 	}
 
@@ -166,7 +169,7 @@ impl <F: AfftField> ReedSolomon<F> {
 				.enumerate()
 				.find_map(|(idx, shard)| {
 					shard.as_ref().map(|shard| {
-						let shard = AsRef::<[[u8; 2]]>::as_ref(shard);
+						let shard = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(shard);
 						(idx, shard.len())
 					})
 				})
@@ -175,7 +178,7 @@ impl <F: AfftField> ReedSolomon<F> {
 			// make sure all shards have the same length as the first one
 			if let Some(other_shard_len) = received_shards[(first_shard_idx + 1)..].iter().find_map(|shard| {
 				shard.as_ref().and_then(|shard| {
-					let shard = AsRef::<[[u8; 2]]>::as_ref(shard);
+					let shard = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(shard);
 					if first_shard_len != shard.len() {
 						Some(shard.len())
 					} else {
@@ -201,8 +204,8 @@ impl <F: AfftField> ReedSolomon<F> {
 				.iter()
 				.map(|x| {
 					x.as_ref().map(|x| {
-						let z = AsRef::<[[u8; 2]]>::as_ref(&x)[i];
-						Additive(u16::from_be_bytes(z))
+						let z = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(&x)[i];
+						Additive(u16::from_be_bytes(&z[..]))
 					})
 				})
 				.collect::<Vec<Option<Additive>>>();
@@ -279,7 +282,7 @@ impl <F: AfftField> ReedSolomon<F> {
     }
 
     /// Bytes shall only contain payload data
-    pub fn encode_sub(&self, bytes: &[u8]) -> Result<Vec<F>> {
+    pub fn encode_sub(&self, bytes: &[u8]) -> Result<Vec<Additive>> {
 	    assert!(is_power_of_2(self.n), "Algorithm only works for 2^i sizes for N");
 	    assert!(is_power_of_2(self.k), "Algorithm only works for 2^i sizes for K");
 	    assert!(bytes.len() <= self.k << 1);

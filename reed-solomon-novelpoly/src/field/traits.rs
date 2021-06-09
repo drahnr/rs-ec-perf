@@ -1,4 +1,3 @@
-
 use core::ops::{BitXor, BitXorAssign, Mul, MulAssign};
 
 /// Additive field representation 
@@ -6,13 +5,15 @@ pub trait FieldAdd :
     Clone + Copy + core::fmt::Debug + Default
     + PartialEq<Self> + Eq
     + BitXor<Self, Output=Self> + BitXorAssign<Self>
+
 {
-    type ElementAsBytes;
 	const FIELD_BITS: usize;
     const FIELD_BYTES: usize = Self::FIELD_BITS / 8;
 	const FIELD_SIZE: usize = 1_usize << Self::FIELD_BITS;
     const ZERO: Self;
+
     // const ONE: Self;
+    //type ElementAsBytes;// = [u8; Self::FIELD_BYTES];
 
     //fn get_internals(&self) -> u8;    
 }
@@ -48,11 +49,11 @@ macro_rules! decl_field_additive {
         use super::{FieldAdd,FieldMul};
 
         /// Additive via XOR form
-        #[derive(Clone, Copy, Debug, Default, BitXor, BitXorAssign, PartialEq, Eq, AsRef)] // PartialOrd,Ord
+        #[derive(Clone, Copy, Debug, Default, BitXor, BitXorAssign, PartialEq, Eq)] // PartialOrd,Ord
         pub struct Additive(pub Elt);
 
         impl FieldAdd for Additive {
-            type ElementAsBytes = [u8; $fbits / 8];
+            //type ElementAsBytes = [u8; $fbits / 8];
             
         	const FIELD_BITS: usize = $fbits;
         	const ZERO: Additive = Additive(0);
@@ -63,8 +64,13 @@ macro_rules! decl_field_additive {
             // }
         }
 
-        impl AsRef<ElementAsBytes> for ElementAsBytes {
+        impl AsRef<[u8; <Self as FieldAdd>::FIELD_BYTES]> for Additive {
+            fn as_ref(&self) -> &[u8; <Self as FieldAdd>::FIELD_BYTES] {
+                unimplemented!()
+            }
+
         }
+        
         impl Additive {
             #[inline(always)]
         	pub fn to_wide(self) -> Wide {

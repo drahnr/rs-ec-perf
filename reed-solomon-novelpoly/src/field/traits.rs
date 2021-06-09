@@ -7,10 +7,14 @@ pub trait FieldAdd :
     + PartialEq<Self> + Eq
     + BitXor<Self, Output=Self> + BitXorAssign<Self>
 {
+    type Element;
 	const FIELD_BITS: usize;
+    const FIELD_BYTES: usize = Self::FIELD_BITS / 8;
 	const FIELD_SIZE: usize = 1_usize << Self::FIELD_BITS;
     const ZERO: Self;
     // const ONE: Self;
+
+    //fn get_internals(&self) -> u8;    
 }
 
 /// Paramaterized field multiplier representation
@@ -40,17 +44,23 @@ where
 macro_rules! decl_field_additive {
 	($name:literal, bits = $fbits:literal) => {
 
-        use derive_more::{Add, AddAssign, BitXor, BitXorAssign, Sub, SubAssign};
+        use derive_more::{Add, AddAssign, BitXor, BitXorAssign, Sub, SubAssign, AsRef};
         use super::{FieldAdd,FieldMul};
 
         /// Additive via XOR form
-        #[derive(Clone, Copy, Debug, Default, BitXor, BitXorAssign, PartialEq, Eq)] // PartialOrd,Ord
+        #[derive(Clone, Copy, Debug, Default, BitXor, BitXorAssign, PartialEq, Eq, AsRef)] // PartialOrd,Ord
         pub struct Additive(pub Elt);
 
         impl FieldAdd for Additive {
+            type Element = [u8; $fbits / 8];
+            
         	const FIELD_BITS: usize = $fbits;
         	const ZERO: Additive = Additive(0);
         	// const ONE: Additive = Additive(1);
+
+            // fn get_internals(&self) -> Elt{
+            //     self.0;
+            // }
         }
 
         impl Additive {

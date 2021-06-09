@@ -53,15 +53,12 @@ fn base_2_upper_bound() {
 fn k_n_construction() {
 	// skip the two, it's a special case
 	for validator_count in 3_usize..=8200 {
-		assert_matches! {
-			CodeParams::derive_parameters(validator_count, recoverablity_subset_size(validator_count)),
-			Ok(CodeParams { n, k, wanted_n }) => {
-				assert_eq!(wanted_n, validator_count);
-				assert!(validator_count <= n, "vc={} <= n={} violated", validator_count, n);
-				assert!(validator_count / 3 >= k - 1, "vc={} / 3 >= k={} violated", validator_count, k);
-				assert!(validator_count >= (k-1) *3, "vc={} <= k={} *3  violated", validator_count, k);
-			}
-		}
+        let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count)).unwrap();
+        
+		assert_eq!(rs.get_number_of_all_shards(), validator_count);
+		assert!(validator_count <= rs.n, "vc={} <= n={} violated", validator_count, rs.n); //no public interface to n as it is internal to the RS coder
+		assert!(validator_count / 3 >= rs.get_number_of_data_shards() - 1, "vc={} / 3 >= k={} violated", validator_count, rs.get_number_of_data_shards());
+		assert!(validator_count >= (rs.get_number_of_data_shards()-1) *3, "vc={} <= k={} *3  violated", validator_count, rs.get_number_of_data_shards());
 	}
 }
 
@@ -76,7 +73,8 @@ fn sub_encode_decode() -> Result<()> {
 	let mut data = [0u8; K2];
 	rng.fill_bytes(&mut data[..]);
 
-	let codewords = ReedSolomon::encode_sub(&data, N, K)?;
+    let rs_coder = ReedSolomon::<f2e16::Additive>::new(N, K)?;
+	let codewords = rs_coder.encode(&data)?;
 	let mut codewords = codewords.into_iter().map(|x| Some(x)).collect::<Vec<_>>();
 	assert_eq!(codewords.len(), N);
 	codewords[0] = None;
@@ -89,10 +87,10 @@ fn sub_encode_decode() -> Result<()> {
 	let erasures = codewords.iter().map(|x| x.is_none()).collect::<Vec<bool>>();
 
 	// Evaluate error locator polynomial only once
-	let mut error_poly_in_log = [Logarithm(0); FIELD_SIZE];
-	ReedSolomon::eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
+	let mut error_poly_in_log = vec![Logarithm(0); FIELD_SIZE];
+	rs_coder.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
 
-	let reconstructed = ReedSolomon::reconstruct_sub(&codewords[..], &erasures[..], N, K, &error_poly_in_log)?;
+	let reconstructed = rs_coder.reconstruct_sub(&codewords[..], &erasures[..], &error_poly_in_log)?;
 	itertools::assert_equal(data.iter(), reconstructed.iter().take(K2));
 	Ok(())
 }
@@ -112,7 +110,7 @@ fn sub_eq_big_for_small_messages() {
 	const K2: usize = K * 2;
 
 	// assure the derived sizes match
-	let rs = CodeParams::derive_parameters(N_WANTED_SHARDS, N_WANTED_SHARDS / 3).unwrap();
+	let rs = ReedSolomon::<f2e16::Additive>::new(N_WANTED_SHARDS, N_WANTED_SHARDS / 3).unwrap();
 	assert_eq!(rs.n, N);
 	assert_eq!(rs.k, K);
 
@@ -126,8 +124,8 @@ fn sub_eq_big_for_small_messages() {
 		data
 	};
 
-	let mut codewords = encode(&data, rs.n).unwrap();
-	let mut codewords_sub = ReedSolomon::encode_sub(&data, N, K).unwrap();
+	let mut codewords = rs.encode(&data, rs.n).unwrap();
+	let mut codewords_sub = rs.encode_sub(&data).unwrap();
 
 	itertools::assert_equal(codewords.iter().map(wrapped_shard_len1_as_gf_sym), codewords_sub.iter().copied());
 
@@ -142,10 +140,10 @@ fn sub_eq_big_for_small_messages() {
 	let erasures = codewords.iter().map(|x| x.is_none()).collect::<Vec<bool>>();
 
 	// Evaluate error locator polynomial only once
-	let mut error_poly_in_log = [Logarithm(0); FIELD_SIZE];
-	ReedSolomon::eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..], FIELD_SIZE);
+	let mut error_poly_in_log = vec![Logarithm(0); FIELD_SIZE];
+	rs.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
 
-	let reconstructed_sub = ReedSolomon::reconstruct_sub(&codewords_sub[..], &erasures[..], N, K, &error_poly_in_log).unwrap();
+	let reconstructed_sub = ReedSolomon::reconstruct_sub(&codewords_sub[..], &erasures[..], &error_poly_in_log).unwrap();
 	let reconstructed = reconstruct(codewords, rs.n).unwrap();
 	itertools::assert_equal(reconstructed.iter().take(K2), reconstructed_sub.iter().take(K2));
 	itertools::assert_equal(reconstructed.iter().take(K2), data.iter());
@@ -161,7 +159,7 @@ fn roundtrip_for_large_messages() -> Result<()> {
 	const K2: usize = K * 2;
 
 	// assure the derived sizes match
-	let rs = CodeParams::derive_parameters(N_WANTED_SHARDS, N_WANTED_SHARDS.saturating_sub(1) / 3)
+	let rs = ReedSolomon::<f2e16::Additive>::new(N_WANTED_SHARDS, N_WANTED_SHARDS.saturating_sub(1) / 3)
 		.expect("Const test parameters are ok. qed");
 	assert_eq!(rs.n, N);
 	assert_eq!(rs.k, K);
@@ -336,35 +334,35 @@ fn ported_c_test() {
 }
 
 #[test]
-fn test_code_params() {
-	assert_matches!(CodeParams::derive_parameters(0, recoverablity_subset_size(0)), Err(_));
+fn test_rs_code_params() {
+	assert_matches!(ReedSolomon::<f2e16::Additive>::new(0, recoverablity_subset_size(0)), Err(_));
 
-	assert_matches!(CodeParams::derive_parameters(1, recoverablity_subset_size(1)), Err(_));
+	assert_matches!(ReedSolomon::<f2e16::Additive>::new(1, recoverablity_subset_size(1)), Err(_));
 
 	assert_eq!(
-		CodeParams::derive_parameters(2, recoverablity_subset_size(2)),
-		Ok(CodeParams { n: 2, k: 1, wanted_n: 2 })
+		ReedSolomon::<f2e16::Additive>::new(2, recoverablity_subset_size(2)),
+		Ok(ReedSolomon { n: 2, k: 1, wanted_n: 2 })
 	);
 
 	assert_eq!(
-		CodeParams::derive_parameters(3, recoverablity_subset_size(3)),
-		Ok(CodeParams { n: 4, k: 1, wanted_n: 3 })
+		ReedSolomon::<f2e16::Additive>::new(3, recoverablity_subset_size(3)),
+		Ok(ReedSolomon { n: 4, k: 1, wanted_n: 3 })
 	);
 
 	assert_eq!(
-		CodeParams::derive_parameters(4, recoverablity_subset_size(4)),
-		Ok(CodeParams { n: 4, k: 2, wanted_n: 4 })
+		ReedSolomon::<f2e16::Additive>::new(4, recoverablity_subset_size(4)),
+		Ok(ReedSolomon { n: 4, k: 2, wanted_n: 4 })
 	);
 
 	assert_eq!(
-		CodeParams::derive_parameters(100, recoverablity_subset_size(100)),
-		Ok(CodeParams { n: 128, k: 32, wanted_n: 100 })
+		ReedSolomon::<f2e16::Additive>::new(100, recoverablity_subset_size(100)),
+		Ok(ReedSolomon { n: 128, k: 32, wanted_n: 100 })
 	);
 }
 
 #[test]
 fn shard_len_is_reasonable() {
-	let rs = CodeParams { n: 16, k: 4, wanted_n: 5 }.make_encoder();
+	let rs = ReedSolomon::<f2e16::Additive>::new(5, 4);
 
 	// since n must be a power of 2
 	// the chunk sizes becomes slightly larger

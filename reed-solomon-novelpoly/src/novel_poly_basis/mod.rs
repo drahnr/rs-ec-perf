@@ -17,13 +17,13 @@ pub use super::util::*;
 use super::field::f2e16;
 
 /// each shard contains one symbol of one run of erasure coding
-pub fn reconstruct<'a, S: Shard>(received_shards: Vec<Option<S>>, validator_count: usize) -> Result<Vec<u8>> {
+pub fn reconstruct<'a, S: Shard<f2e16::Additive>>(received_shards: Vec<Option<S>>, validator_count: usize) -> Result<Vec<u8>> {
 	let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
 
 	rs.reconstruct(received_shards)
 }
 
-pub fn encode<S: Shard>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
+pub fn encode<S: Shard<f2e16::Additive>>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
 	let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
 
 	rs.encode::<S>(bytes)
@@ -46,7 +46,7 @@ pub struct ReedSolomon<F: AfftField> {
     _marker: PhantomData<*const F>,
 }
 
-impl <F:AfftField> ReedSolomon<F> {
+impl <F: AfftField> ReedSolomon<F> {
 
     /// Returns the total number of data shard
     /// consumed by the code. That is equal the total number of symbols
@@ -99,7 +99,7 @@ impl <F:AfftField> ReedSolomon<F> {
 	    Ok(Self { wanted_n: n, n: n_po2, k: k_po2, _marker: PhantomData})
 	}
 
-	pub fn encode<S: Shard>(&self, bytes: &[u8]) -> Result<Vec<S>> {
+	pub fn encode<S: Shard<F>>(&self, bytes: &[u8]) -> Result<Vec<S>> {
 		if bytes.is_empty() {
 			return Err(Error::PayloadSizeIsZero);
 		}
@@ -131,7 +131,7 @@ impl <F:AfftField> ReedSolomon<F> {
 			assert!(data_piece.len() <= k2);
 			let encoding_run = self.encode_sub(data_piece)?;
 			for val_idx in 0..validator_count {
-				AsMut::<[[u8; 2]]>::as_mut(&mut shards[val_idx])[chunk_idx] = encoding_run[val_idx].0.to_be_bytes();
+				AsMut::<[[u8; 2]]>::as_mut(&mut shards[val_idx])[chunk_idx] = encoding_run[val_idx] as [u8; 2];
 			}
 		}
 
@@ -139,7 +139,7 @@ impl <F:AfftField> ReedSolomon<F> {
 	}
 
 	/// each shard contains one symbol of one run of erasure coding
-	pub fn reconstruct<S: Shard>(&self, received_shards: Vec<Option<S>>) -> Result<Vec<u8>> {
+	pub fn reconstruct<S: Shard<F>>(&self, received_shards: Vec<Option<S>>) -> Result<Vec<u8>> {
 		let gap = self.n.saturating_sub(received_shards.len());
 
 		let received_shards =
@@ -279,7 +279,7 @@ impl <F:AfftField> ReedSolomon<F> {
     }
 
     /// Bytes shall only contain payload data
-    pub fn encode_sub(&self, bytes: &[u8]) -> Result<Vec<Additive>> {
+    pub fn encode_sub(&self, bytes: &[u8]) -> Result<Vec<F>> {
 	    assert!(is_power_of_2(self.n), "Algorithm only works for 2^i sizes for N");
 	    assert!(is_power_of_2(self.k), "Algorithm only works for 2^i sizes for K");
 	    assert!(bytes.len() <= self.k << 1);
@@ -338,7 +338,6 @@ impl <F:AfftField> ReedSolomon<F> {
 	assert!(is_power_of_2(self.k), "Algorithm only works for 2^i sizes for K");
 	    assert_eq!(codewords.len(), self.n);
 	assert!(self.k <= self.n / 2);
-        
 	    // The recovered _payload_ chunks AND parity chunks
 	let mut recovered = vec![Additive(0); self.k];
         

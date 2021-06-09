@@ -134,7 +134,7 @@ where
 			assert!(data_piece.len() <= k2);
 			let encoding_run = self.encode_sub(data_piece)?;
 			for val_idx in 0..validator_count {
-				AsMut::<[[u8; 2]]>::as_mut(&mut shards[val_idx])[chunk_idx] = encoding_run[val_idx] as [u8; 2];
+				AsMut::<[[u8; F::FIELD_BYTES]]>::as_mut(&mut shards[val_idx])[chunk_idx] = encoding_run[val_idx];
 			}
 		}
 
@@ -169,7 +169,7 @@ where
 				.enumerate()
 				.find_map(|(idx, shard)| {
 					shard.as_ref().map(|shard| {
-						let shard = AsRef::<[[u8; 2]]>::as_ref(shard);
+						let shard = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(shard);
 						(idx, shard.len())
 					})
 				})
@@ -178,7 +178,7 @@ where
 			// make sure all shards have the same length as the first one
 			if let Some(other_shard_len) = received_shards[(first_shard_idx + 1)..].iter().find_map(|shard| {
 				shard.as_ref().and_then(|shard| {
-					let shard = AsRef::<[[u8; 2]]>::as_ref(shard);
+					let shard = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(shard);
 					if first_shard_len != shard.len() {
 						Some(shard.len())
 					} else {
@@ -204,7 +204,7 @@ where
 				.iter()
 				.map(|x| {
 					x.as_ref().map(|x| {
-						let z = AsRef::<[[u8; 2]]>::as_ref(&x)[i];
+						let z = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(&x)[i];
 						Additive(u16::from_be_bytes(z))
 					})
 				})

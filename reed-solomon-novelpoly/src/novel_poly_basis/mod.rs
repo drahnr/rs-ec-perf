@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 
 use crate::errors::*;
 use crate::f2e16::*;
-use crate::Shard;
+use crate::{Shard, ShardHold};
 use crate::field::afft::*;
 use crate::field::FieldAdd;
 
@@ -107,7 +107,7 @@ where
 		if bytes.is_empty() {
 			return Err(Error::PayloadSizeIsZero);
 		}
-
+        
 		// setup the shards, n is likely _larger_, so use the truely required number of shards
 
 		// required shard length in bytes, rounded to full symbols
@@ -143,6 +143,9 @@ where
 
 	/// each shard contains one symbol of one run of erasure coding
 	pub fn reconstruct<S: Shard<F>>(&self, received_shards: Vec<Option<S>>) -> Result<Vec<u8>> {
+
+        let shard_len_in_syms = <ShardHold<S,F>>::verify_reconstructiblity(&received_shards)?;
+
 		let gap = self.n.saturating_sub(received_shards.len());
 
 		let received_shards =
@@ -163,37 +166,37 @@ where
 		}
 
 		// obtain a sample of a shard length and assume that is the truth
-		let shard_len_in_syms = {
-			let (first_shard_idx, first_shard_len) = received_shards
-				.iter()
-				.enumerate()
-				.find_map(|(idx, shard)| {
-					shard.as_ref().map(|shard| {
-						let shard = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(shard);
-						(idx, shard.len())
-					})
-				})
-				.expect("Existential shard count is at least k shards. qed");
+		// let shard_len_in_syms = {
+		// 	let (first_shard_idx, first_shard_len) = received_shards
+		// 		.iter()
+		// 		.enumerate()
+		// 		.find_map(|(idx, shard)| {
+		// 			shard.as_ref().map(|shard| {
+		// 				let shard = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(shard);
+		// 				(idx, shard.len())
+		// 			})
+		// 		})
+		// 		.expect("Existential shard count is at least k shards. qed");
 
-			// make sure all shards have the same length as the first one
-			if let Some(other_shard_len) = received_shards[(first_shard_idx + 1)..].iter().find_map(|shard| {
-				shard.as_ref().and_then(|shard| {
-					let shard = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(shard);
-					if first_shard_len != shard.len() {
-						Some(shard.len())
-					} else {
-						None
-					}
-				})
-			}) {
-				return Err(Error::InconsistentShardLengths { first: first_shard_len, other: other_shard_len });
-			}
+		// 	// make sure all shards have the same length as the first one
+		// 	if let Some(other_shard_len) = received_shards[(first_shard_idx + 1)..].iter().find_map(|shard| {
+		// 		shard.as_ref().and_then(|shard| {
+		// 			let shard = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(shard);
+		// 			if first_shard_len != shard.len() {
+		// 				Some(shard.len())
+		// 			} else {
+		// 				None
+		// 			}
+		// 		})
+		// 	}) {
+		// 		return Err(Error::InconsistentShardLengths { first: first_shard_len, other: other_shard_len });
+		// 	}
 
-			first_shard_len
-		};
+		// 	first_shard_len
+		// };
 
-		// Evaluate error locator polynomial only once
-		//let mut error_poly_in_log = [Logarithm(0); F::FIELD_SIZE];
+		//Evaluate error locator polynomial only once
+		let mut error_poly_in_log = [Logarithm(0); F::FIELD_SIZE];
         let mut error_poly_in_log = vec![Logarithm(0); F::FIELD_SIZE];
 		self.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
 

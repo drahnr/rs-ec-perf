@@ -64,6 +64,11 @@ pub trait ShardHold<S,F> :
     ///be propely converted to a slice of underlying field elements
     ///return the uniform shard length
     fn verify_reconstructiblity(&self) -> Result<usize>;
+
+    ///make set of the shard to have exactly as many shard as
+    ///the number of symbols in an encoded word, by either adding
+    ///empty shards or removing extra shards.
+    fn equalize_shards_number_with_code_block_length(&self, code_block_length: usize) -> Self;
 }
 
 impl <S,F,T> ShardHold<S,F>  for T where
@@ -98,6 +103,14 @@ impl <S,F,T> ShardHold<S,F>  for T where
         }
 
         return uniform_shard_len;
+    }
+
+    fn equalize_shards_number_with_code_block_length(&self, code_block_length: usize) -> Self {
+        let gap = code_block_length.saturating_sub(self.as_ref().len()); //minimum number of missing shards, some received shard might be None
+
+        //This might be too naive you might be removing none empty shards and leaving empty shards in place. nonetheless given the placement of the shard in the slice are important it is not possible to rescue beyond block length data without major restructuring of the reconstruction code
+		let rearrenged_shards =
+			self.as_ref().into_iter().take(code_block_length).chain(std::iter::repeat(None).take(gap)).collect::<Vec<_>>();
     }
 
 }

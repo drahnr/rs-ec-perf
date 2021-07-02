@@ -9,28 +9,28 @@ use std::marker::PhantomData;
 
 use crate::errors::*;
 use crate::f2e16::*;
-use crate::{Shard};
+//use crate::{Shard};
 use crate::field::afft::*;
 use crate::field::FieldAdd;
 
-use crate::shard::ShardHold;
+//use crate::shard::ShardHold;
 
 pub use super::util::*;
 
 use super::field::f2e16;
 
 /// each shard contains one symbol of one run of erasure coding
-pub fn reconstruct<'a, S: Shard<f2e16::Additive>>(received_shards: Vec<Option<S>>, validator_count: usize) -> Result<Vec<u8>> {
-	let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
+// pub fn reconstruct<'a, S: Shard<f2e16::Additive>>(received_shards: Vec<Option<S>>, validator_count: usize) -> Result<Vec<u8>> {
+// 	let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
 
-	rs.reconstruct(received_shards)
-}
+// 	rs.reconstruct(received_shards)
+// }
 
-pub fn encode<S: Shard<f2e16::Additive>>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
-	let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
+// pub fn encode<S: Shard<f2e16::Additive>>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
+// 	let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
 
-	rs.encode::<S>(bytes)
-}
+// 	rs.encode::<S>(bytes)
+// }
 
 /// Reed-Solomon erasure code encoder/decoder.
 /// # Example
@@ -105,94 +105,95 @@ where
 	    Ok(Self { wanted_n: n, n: n_po2, k: k_po2, _marker: PhantomData})
 	}
 
-	pub fn encode<S: Shard<Additive>>(&self, bytes: &[u8]) -> Result<Vec<S>> {
-		if bytes.is_empty() {
-			return Err(Error::PayloadSizeIsZero);
-		}
+	// pub fn encode<S: Shard<Additive>>(&self, bytes: &[u8]) -> Result<Vec<S>> {
+	// 	if bytes.is_empty() {
+	// 		return Err(Error::PayloadSizeIsZero);
+	// 	}
         
-		// setup the shards, n is likely _larger_, so use the truely required number of shards
+	// 	// setup the shards, n is likely _larger_, so use the truely required number of shards
 
-		// required shard length in bytes, rounded to full symbols
-		let shard_len = self.shard_len(bytes.len());
-		assert!(shard_len > 0);
-		// collect all sub encoding runs
+	// 	// required shard length in bytes, rounded to full symbols
+	// 	let shard_len = self.shard_len(bytes.len());
+	// 	assert!(shard_len > 0);
+	// 	// collect all sub encoding runs
 
-		let validator_count = self.wanted_n;
-		let k2 = self.k * 2;
-		// prepare one wrapped shard per validator
-		let mut shards = vec![
-			<S as From<Vec<u8>>>::from({
-				let mut v = Vec::<u8>::with_capacity(shard_len);
-				unsafe { v.set_len(shard_len) }
-				v
-			});
-			validator_count
-		];
+	// 	let validator_count = self.wanted_n;
+	// 	let k2 = self.k * 2;
+	// 	// prepare one wrapped shard per validator
+	// 	let mut shards = vec![
+	// 		<S as From<Vec<u8>>>::from({
+	// 			let mut v = Vec::<u8>::with_capacity(shard_len);
+	// 			unsafe { v.set_len(shard_len) }
+	// 			v
+	// 		});
+	// 		validator_count
+	// 	];
 
-		for (chunk_idx, i) in (0..bytes.len()).into_iter().step_by(k2).enumerate() {
-			let end = std::cmp::min(i + k2, bytes.len());
-			assert_ne!(i, end);
-			let data_piece = &bytes[i..end];
-			assert!(!data_piece.is_empty());
-			assert!(data_piece.len() <= k2);
-			let encoding_run = self.encode_sub(data_piece)?;
-			for val_idx in 0..validator_count {
-				shards[val_idx].set_chunk(chunk_idx, AsRef::<[u8; <Additive as FieldAdd>::FIELD_BYTES]>::as_ref(&encoding_run[val_idx]));
-			}
-		}
-		Ok(shards)
-	}
+	// 	for (chunk_idx, i) in (0..bytes.len()).into_iter().step_by(k2).enumerate() {
+	// 		let end = std::cmp::min(i + k2, bytes.len());
+	// 		assert_ne!(i, end);
+	// 		let data_piece = &bytes[i..end];
+	// 		assert!(!data_piece.is_empty());
+	// 		assert!(data_piece.len() <= k2);
+	// 		let encoding_run = self.encode_sub(data_piece)?;
+	// 		for val_idx in 0..validator_count {
+	// 			shards[val_idx].set_chunk(chunk_idx, AsRef::<[u8; <Additive as FieldAdd>::FIELD_BYTES]>::as_ref(&encoding_run[val_idx]));
+	// 		}
+	// 	}
+	// 	Ok(shards)
+	// }
 
 	/// each shard contains one symbol of one run of erasure coding
-	pub fn reconstruct<S: Shard<F>>(&self, received_shards: Vec<Option<S>>) -> Result<Vec<u8>> {
+ 	// pub fn reconstruct<S: Shard<F>>(&self, received_shards: Vec<Option<S>>) -> Result<Box<Vec<u8>>> {
 
 
-        let shard_len_in_syms = <ShardHold<S,F>>::verify_reconstructiblity(&received_shards)?;
+    //     // let shard_len_in_syms = <ShardHold<S,F>>::verify_reconstructiblity(&received_shards)?;
 
-        let received_shards = <ShardHold<S,F>>::equalize_shards_number_with_code_block_length(&received_shards, self.n);
+    //     // let received_shards = <ShardHold<S,F>>::equalize_shards_number_with_code_block_length(&received_shards, self.n);
 
-		assert_eq!(received_shards.len(), self.n);
+	// 	// assert_eq!(received_shards.len(), self.n);
 
-		// must be collected after expanding `received_shards` to the anticipated size
-		let mut existential_count = 0_usize;
-		let erasures = received_shards
-			.iter()
-			.map(|x| x.is_none())
-			.inspect(|erased| existential_count += !*erased as usize)
-			.collect::<Vec<bool>>();
+	// 	// // must be collected after expanding `received_shards` to the anticipated size
+	// 	// let mut existential_count = 0_usize;
+	// 	// let erasures = received_shards
+	// 	// 	.iter()
+	// 	// 	.map(|x| x.is_none())
+	// 	// 	.inspect(|erased| existential_count += !*erased as usize)
+	// 	// 	.collect::<Vec<bool>>();
 
-		if existential_count < self.k {
-			return Err(Error::NeedMoreShards { have: existential_count, min: self.k, all: self.n });
-		}
+	// 	// if existential_count < self.k {
+	// 	// 	return Err(Error::NeedMoreShards { have: existential_count, min: self.k, all: self.n });
+	// 	// }
 
-		//Evaluate error locator polynomial only once
-		let mut error_poly_in_log = [Logarithm(0); F::FIELD_SIZE];
-        let mut error_poly_in_log = vec![Logarithm(0); F::FIELD_SIZE];
-		self.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
+	// 	// //Evaluate error locator polynomial only once
+	// 	// let mut error_poly_in_log = [Logarithm(0); F::FIELD_SIZE];
+    //     // let mut error_poly_in_log = vec![Logarithm(0); F::FIELD_SIZE];
+	// 	// self.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
 
-		let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);
-		for i in 0..shard_len_in_syms {
-			// take the i-th element of all shards and try to recover
-			let decoding_run = received_shards
-				.iter()
-				.map(|x| {
-					x.as_ref().map(|x| {
-						let z = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(&x)[i];
-						Additive(u16::from_be_bytes(&z[..]))
-					})
-				})
-				.collect::<Vec<Option<Additive>>>();
+	// 	// let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);
+	// 	// for i in 0..shard_len_in_syms {
+	// 	// 	// take the i-th element of all shards and try to recover
+	// 	// 	let decoding_run = received_shards
+	// 	// 		.iter()
+	// 	// 		.map(|x| {
+	// 	// 			x.as_ref().map(|x| {
+	// 	// 				let z = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(&x)[i];
+	// 	// 				Additive(u16::from_be_bytes(&z[..]))
+	// 	// 			})
+	// 	// 		})
+	// 	// 		.collect::<Vec<Option<Additive>>>();
 
-			assert_eq!(decoding_run.len(), self.n);
+	// 	// 	assert_eq!(decoding_run.len(), self.n);
 
-			// reconstruct from one set of symbols which was spread over all erasure chunks
-			let piece =
-				self.reconstruct_sub(&decoding_run[..], &erasures, &error_poly_in_log).unwrap();
-			acc.extend_from_slice(&piece[..]);
-		}
+	// 	// 	// reconstruct from one set of symbols which was spread over all erasure chunks
+	// 	// 	let piece =
+	// 	// 		self.reconstruct_sub(&decoding_run[..], &erasures, &error_poly_in_log).unwrap();
+	// 	// 	acc.extend_from_slice(&piece[..]);
+	// 	// }
 
-		Ok(acc)
-	}
+	// 	// Ok(acc)
+    //     Ok(vec![])
+	// }
 
     /// Encoding alg for k/n < 0.5: message is a power of two
     pub fn encode_low(&self, data: &[Additive], codeword: &mut [Additive]) {

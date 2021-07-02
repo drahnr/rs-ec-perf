@@ -22,6 +22,13 @@ pub enum Error {
 
 	#[error("Shards do have inconsistent lengths: first = {first}, other = {other})")]
 	InconsistentShardLengths { first: usize, other: usize },
+
+    #[error("Cannot reconstruct from length zero shards")]
+	ZeroLengthShards,
+
+    #[error("Shard are cannot be properly divided into field elements. Shard length of {shard_length} is not divisable by field element byte length of {field_bytes}")]
+	UndivisableShardLength{shard_length: usize, field_bytes: usize},
+
 }
 
 /// Result alias to simplify API.

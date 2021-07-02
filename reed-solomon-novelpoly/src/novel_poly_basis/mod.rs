@@ -6,10 +6,11 @@
 // (http://arxiv.org/abs/1404.3458)
 
 use std::marker::PhantomData;
+use std::convert::TryInto;
 
 use crate::errors::*;
 use crate::f2e16::*;
-//use crate::{Shard};
+use crate::{Shard};
 use crate::field::afft::*;
 use crate::field::FieldAdd;
 
@@ -20,23 +21,24 @@ pub use super::util::*;
 use super::field::f2e16;
 
 /// each shard contains one symbol of one run of erasure coding
-// pub fn reconstruct<'a, S: Shard<f2e16::Additive>>(received_shards: Vec<Option<S>>, validator_count: usize) -> Result<Vec<u8>> {
-// 	let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
+pub fn reconstruct<S: Shard<{f2e16::Additive::FIELD_BYTES}>>(received_shards: Vec<Option<S>>, validator_count: usize) -> Result<Vec<u8>> {
+	let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
 
-// 	rs.reconstruct(received_shards)
-// }
+	rs.reconstruct(received_shards)
+}
 
-// pub fn encode<S: Shard<f2e16::Additive>>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
-// 	let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
+pub fn encode<S: Shard<2>>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
+	let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
 
-// 	rs.encode::<S>(bytes)
-// }
+	rs.encode::<S>(bytes)
+}
 
 /// Reed-Solomon erasure code encoder/decoder.
 /// # Example
 ///
 /// let r: ReedSolomon<Field> = ReedSolomon::new(3, 2).unwrap();
 ///
+#[derive(Debug)]
 pub struct ReedSolomon<F: AfftField> {
 	/// Avoid copying unnecessary chunks.
 	wanted_n: usize,
@@ -105,95 +107,137 @@ where
 	    Ok(Self { wanted_n: n, n: n_po2, k: k_po2, _marker: PhantomData})
 	}
 
-	// pub fn encode<S: Shard<Additive>>(&self, bytes: &[u8]) -> Result<Vec<S>> {
-	// 	if bytes.is_empty() {
-	// 		return Err(Error::PayloadSizeIsZero);
-	// 	}
+    pub fn encode<S: Shard<{F::FIELD_BYTES}>>(&self, bytes: &[u8]) -> Result<Vec<S>> {
+		if bytes.is_empty() {
+			return Err(Error::PayloadSizeIsZero);
+		}
         
-	// 	// setup the shards, n is likely _larger_, so use the truely required number of shards
+		// setup the shards, n is likely _larger_, so use the truely required number of shards
 
-	// 	// required shard length in bytes, rounded to full symbols
-	// 	let shard_len = self.shard_len(bytes.len());
-	// 	assert!(shard_len > 0);
-	// 	// collect all sub encoding runs
+		// required shard length in bytes, rounded to full symbols
+		let shard_len = self.shard_len(bytes.len());
+		assert!(shard_len > 0);
+		// collect all sub encoding runs
 
-	// 	let validator_count = self.wanted_n;
-	// 	let k2 = self.k * 2;
-	// 	// prepare one wrapped shard per validator
-	// 	let mut shards = vec![
-	// 		<S as From<Vec<u8>>>::from({
-	// 			let mut v = Vec::<u8>::with_capacity(shard_len);
-	// 			unsafe { v.set_len(shard_len) }
-	// 			v
-	// 		});
-	// 		validator_count
-	// 	];
+		let validator_count = self.wanted_n;
+		let k2 = self.k * 2;
+		// prepare one wrapped shard per validator
+		let mut shards = vec![
+			<S as From<Vec<u8>>>::from({
+				let mut v = Vec::<u8>::with_capacity(shard_len);
+				unsafe { v.set_len(shard_len) }
+				v
+			});
+			validator_count
+		];
 
-	// 	for (chunk_idx, i) in (0..bytes.len()).into_iter().step_by(k2).enumerate() {
-	// 		let end = std::cmp::min(i + k2, bytes.len());
-	// 		assert_ne!(i, end);
-	// 		let data_piece = &bytes[i..end];
-	// 		assert!(!data_piece.is_empty());
-	// 		assert!(data_piece.len() <= k2);
-	// 		let encoding_run = self.encode_sub(data_piece)?;
-	// 		for val_idx in 0..validator_count {
-	// 			shards[val_idx].set_chunk(chunk_idx, AsRef::<[u8; <Additive as FieldAdd>::FIELD_BYTES]>::as_ref(&encoding_run[val_idx]));
-	// 		}
-	// 	}
-	// 	Ok(shards)
-	// }
+		for (chunk_idx, i) in (0..bytes.len()).into_iter().step_by(k2).enumerate() {
+		    let end = std::cmp::min(i + k2, bytes.len());
+		    assert_ne!(i, end);
+		    let data_piece = &bytes[i..end];
+		    assert!(!data_piece.is_empty());
+		    assert!(data_piece.len() <= k2);
+		    let encoding_run = self.encode_sub(data_piece)?;
+		    for val_idx in 0..validator_count {	
+		shards[val_idx].set_chunk(chunk_idx, encoding_run[val_idx].to_be_bytes()[..].try_into().expect("F::FIELD_BYTES and FieldAdd::FIELD_BYTES are the same. q.e.d"));
+		    }
+		}
+		Ok(shards)
+	}
+
+    ///Verifies if all shards have the same length and they can 
+    ///be propely converted to a slice of underlying field elements
+    ///return the uniform shard length
+    fn verify_reconstructiblity<S: Shard<{F::FIELD_BYTES}>>(&self, received_shards: &Vec<Option<S>>) -> Result<usize> {
+        //if all shards empty there is nothig to reconstruct hence reject.
+        let maybe_first_available_shard = AsRef::<[Option<S>]>::as_ref(&received_shards).iter().find(|optional_shard| match optional_shard { Some(_) => true, None => false});
+        let first_available_shard = match maybe_first_available_shard.as_ref() {
+            None => Err(Error::PayloadSizeIsZero)?,
+            Some(first_available_shard) => first_available_shard.as_ref().expect("Already has checked it is not none. q.e.d"),
+        };
+        
+        let uniform_shard_len = AsRef::<[u8]>::as_ref(&first_available_shard).len();
+
+        if uniform_shard_len == 0 {
+            Err(Error::ZeroLengthShards)?;
+        }
+
+        if uniform_shard_len % F::FIELD_BYTES != 0 {
+            Err(Error::UndivisableShardLength {shard_length: uniform_shard_len, field_bytes: F::FIELD_BYTES} )?;            
+        }
+            
+        for optional_shard in received_shards {//  { AsRef::<[Option<S>]>.as_ref(&self)
+            match optional_shard {
+                Some(shard) => if  AsRef::<[u8]>::as_ref(&shard).len() !=  uniform_shard_len {
+                    Err(Error::InconsistentShardLengths{ first: uniform_shard_len, other: AsRef::<[u8]>::as_ref(&shard).len() })?;
+                }
+                _ => (),
+            }
+        }
+
+        return Ok(uniform_shard_len);
+    }
+
+        ///make set of the shard to have exactly as many shard as
+    ///the number of symbols in an encoded word, by either adding
+    ///empty shards or removing extra shards.
+    fn equalize_shards_number_with_code_block_length<'a, S: Shard<{F::FIELD_BYTES}>>(&self, received_shards: &'a Vec<Option<S>>) -> Vec<Option<&'a S>> {
+	let code_block_length = self.n;
+        let gap = code_block_length.saturating_sub(received_shards.len()); //== max(code_block_length - self.as_ref().len(), 0): minimum number of missing shards, some received shard might be None
+
+        //This might be too naive you might be removing none empty shards and leaving empty shards in place. nonetheless given the placement of the shard in the slice are important it is not possible to rescue beyond block length data without major restructuring of the reconstruction code
+	received_shards.iter().map(|s| s.as_ref()).take(code_block_length).chain(std::iter::repeat(None).take(gap)).collect::<Vec<_>>()
+    }
 
 	/// each shard contains one symbol of one run of erasure coding
- 	// pub fn reconstruct<S: Shard<F>>(&self, received_shards: Vec<Option<S>>) -> Result<Box<Vec<u8>>> {
+    pub fn reconstruct<S: Shard<{F::FIELD_BYTES}>>(&self, received_shards: Vec<Option<S>>) -> Result<Vec<u8>> where [(); F::FIELD_SIZE]: Sized
+    {
+        let shard_len_in_syms = self.verify_reconstructiblity(&received_shards)?;
 
+        let received_shards = self.equalize_shards_number_with_code_block_length(&received_shards);
 
-    //     // let shard_len_in_syms = <ShardHold<S,F>>::verify_reconstructiblity(&received_shards)?;
+		assert_eq!(received_shards.len(), self.n);
 
-    //     // let received_shards = <ShardHold<S,F>>::equalize_shards_number_with_code_block_length(&received_shards, self.n);
+		// must be collected after expanding `received_shards` to the anticipated size
+		let mut existential_count = 0_usize;
+		let erasures = received_shards
+			.iter()
+			.map(|x| x.is_none())
+			.inspect(|erased| existential_count += !*erased as usize)
+			.collect::<Vec<bool>>();
 
-	// 	// assert_eq!(received_shards.len(), self.n);
+		if existential_count < self.k {
+			return Err(Error::NeedMoreShards { have: existential_count, min: self.k, all: self.n });
+		}
 
-	// 	// // must be collected after expanding `received_shards` to the anticipated size
-	// 	// let mut existential_count = 0_usize;
-	// 	// let erasures = received_shards
-	// 	// 	.iter()
-	// 	// 	.map(|x| x.is_none())
-	// 	// 	.inspect(|erased| existential_count += !*erased as usize)
-	// 	// 	.collect::<Vec<bool>>();
+		//Evaluate error locator polynomial only once
+		let mut error_poly_in_log = [Logarithm(0); F::FIELD_SIZE];
+        let mut error_poly_in_log = vec![Logarithm(0); F::FIELD_SIZE];
+		self.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
 
-	// 	// if existential_count < self.k {
-	// 	// 	return Err(Error::NeedMoreShards { have: existential_count, min: self.k, all: self.n });
-	// 	// }
+		let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);
+		for i in 0..shard_len_in_syms {
+			// take the i-th element of all shards and try to recover
+			let decoding_run = received_shards
+				.iter()
+				.map(|x| {
+					x.as_ref().map(|x| {
+					    let z = AsRef::<[[u8; {F::FIELD_BYTES}]]>::as_ref(&x)[i];
+					    Additive::from_be_bytes(z[..].try_into().expect("F::FIELD_BYTES and FieldAdd>::FIELD_BYTES are the same. q.e.d"))
+					})
+				})
+				.collect::<Vec<Option<Additive>>>();
 
-	// 	// //Evaluate error locator polynomial only once
-	// 	// let mut error_poly_in_log = [Logarithm(0); F::FIELD_SIZE];
-    //     // let mut error_poly_in_log = vec![Logarithm(0); F::FIELD_SIZE];
-	// 	// self.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
+			assert_eq!(decoding_run.len(), self.n);
 
-	// 	// let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);
-	// 	// for i in 0..shard_len_in_syms {
-	// 	// 	// take the i-th element of all shards and try to recover
-	// 	// 	let decoding_run = received_shards
-	// 	// 		.iter()
-	// 	// 		.map(|x| {
-	// 	// 			x.as_ref().map(|x| {
-	// 	// 				let z = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(&x)[i];
-	// 	// 				Additive(u16::from_be_bytes(&z[..]))
-	// 	// 			})
-	// 	// 		})
-	// 	// 		.collect::<Vec<Option<Additive>>>();
+			// reconstruct from one set of symbols which was spread over all erasure chunks
+			let piece =
+				self.reconstruct_sub(&decoding_run[..], &erasures, &error_poly_in_log).unwrap();
+			acc.extend_from_slice(&piece[..]);
+		}
 
-	// 	// 	assert_eq!(decoding_run.len(), self.n);
-
-	// 	// 	// reconstruct from one set of symbols which was spread over all erasure chunks
-	// 	// 	let piece =
-	// 	// 		self.reconstruct_sub(&decoding_run[..], &erasures, &error_poly_in_log).unwrap();
-	// 	// 	acc.extend_from_slice(&piece[..]);
-	// 	// }
-
-	// 	// Ok(acc)
-    //     Ok(vec![])
-	// }
+		Ok(acc)
+	}
 
     /// Encoding alg for k/n < 0.5: message is a power of two
     pub fn encode_low(&self, data: &[Additive], codeword: &mut [Additive]) {

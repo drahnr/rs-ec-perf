@@ -1,3 +1,6 @@
+#![feature(const_generics)]
+#![feature(const_evaluatable_checked)]
+
 use crate::errors::*;
 use crate::util::*;
 

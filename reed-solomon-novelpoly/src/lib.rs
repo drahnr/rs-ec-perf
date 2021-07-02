@@ -16,7 +16,7 @@ mod novel_poly_basis;
 pub use self::novel_poly_basis::*;
 
 pub mod shard;
-pub use self::shard::Shard;
+pub use self::shard::{Shard};
 
 pub mod wrapped_shard;
 pub use self::wrapped_shard::WrappedShard;

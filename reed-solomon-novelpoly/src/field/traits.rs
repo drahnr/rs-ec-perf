@@ -7,15 +7,16 @@ pub trait FieldAdd :
     + BitXor<Self, Output=Self> + BitXorAssign<Self>
 
 {
-	const FIELD_BITS: usize;
+    const FIELD_BITS: usize;
     const FIELD_BYTES: usize = Self::FIELD_BITS / 8;
-	const FIELD_SIZE: usize = 1_usize << Self::FIELD_BITS;
+    const FIELD_SIZE: usize = 1_usize << Self::FIELD_BITS;
     const ZERO: Self;
 
     // const ONE: Self;
-    //type ElementAsBytes;// = [u8; Self::FIELD_BYTES];
+    type ElementAsBytes; // = [u8; Self::FIELD_BYTES];
 
-    //fn get_internals(&self) -> u8;    
+    //fn get_internals(&self) -> Elm;
+    //fn to_be_bytes(&self) -> Self::ElementAsBytes;
 }
 
 /// Paramaterized field multiplier representation
@@ -53,7 +54,7 @@ macro_rules! decl_field_additive {
         pub struct Additive(pub Elt);
 
         impl FieldAdd for Additive {
-            //type ElementAsBytes = [u8; $fbits / 8];
+            type ElementAsBytes = [u8; {Self::FIELD_BYTES}];
             
         	const FIELD_BITS: usize = $fbits;
         	const ZERO: Additive = Additive(0);
@@ -80,6 +81,15 @@ macro_rules! decl_field_additive {
         	pub fn from_wide(x: Wide) -> Additive {
         		Additive(x as Elt)
         	}
+
+	    pub fn to_be_bytes(&self) -> [u8; <Self as FieldAdd>::FIELD_BYTES] {
+                 self.0.to_be_bytes() 
+            }
+
+	    pub fn from_be_bytes(serialized_element: [u8; <Self as FieldAdd>::FIELD_BYTES]) -> Self {
+		Self(Elt::from_be_bytes(serialized_element))
+	    }
+
         }
 
         pub const FIELD_BITS: usize = Additive::FIELD_BITS;

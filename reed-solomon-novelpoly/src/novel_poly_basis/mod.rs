@@ -21,7 +21,7 @@ pub use super::util::*;
 use super::field::f2e16;
 
 /// each shard contains one symbol of one run of erasure coding
-pub fn reconstruct<S: Shard<{ f2e16::Additive::FIELD_BYTES }>>(
+pub fn reconstruct<S: Shard<f2e16::Additive>>(
     received_shards: Vec<Option<S>>,
     validator_count: usize,
 ) -> Result<Vec<u8>> {
@@ -30,7 +30,7 @@ pub fn reconstruct<S: Shard<{ f2e16::Additive::FIELD_BYTES }>>(
     rs.reconstruct(received_shards)
 }
 
-pub fn encode<S: Shard<2>>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
+pub fn encode<S: Shard<f2e16::Additive>>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
     let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
 
     rs.encode::<S>(bytes)
@@ -109,7 +109,7 @@ where
         Ok(Self { wanted_n: n, n: n_po2, k: k_po2, _marker: PhantomData })
     }
 
-    pub fn encode<S: Shard<{ F::FIELD_BYTES }>>(&self, bytes: &[u8]) -> Result<Vec<S>> {
+    pub fn encode<S: Shard<F>>(&self, bytes: &[u8]) -> Result<Vec<S>> {
         if bytes.is_empty() {
             return Err(Error::PayloadSizeIsZero);
         }
@@ -155,7 +155,7 @@ where
     ///Verifies if all shards have the same length and they can
     ///be propely converted to a slice of underlying field elements
     ///return the uniform shard length
-    fn verify_reconstructiblity<S: Shard<{ F::FIELD_BYTES }>>(
+    fn verify_reconstructiblity<S: Shard<F>>(
         &self,
         received_shards: &Vec<Option<S>>,
     ) -> Result<usize> {
@@ -203,7 +203,7 @@ where
     ///make set of the shard to have exactly as many shard as
     ///the number of symbols in an encoded word, by either adding
     ///empty shards or removing extra shards.
-    fn equalize_shards_number_with_code_block_length<'a, S: Shard<{ F::FIELD_BYTES }>>(
+    fn equalize_shards_number_with_code_block_length<'a, S: Shard<F>>(
         &self,
         received_shards: &'a Vec<Option<S>>,
     ) -> Vec<Option<&'a S>> {
@@ -220,7 +220,7 @@ where
     }
 
     /// each shard contains one symbol of one run of erasure coding
-    pub fn reconstruct<S: Shard<{ F::FIELD_BYTES }>>(&self, received_shards: Vec<Option<S>>) -> Result<Vec<u8>>
+    pub fn reconstruct<S: Shard<F>>(&self, received_shards: Vec<Option<S>>) -> Result<Vec<u8>>
     where
         [(); F::FIELD_SIZE]: Sized,
     {
@@ -254,7 +254,7 @@ where
                 .iter()
                 .map(|x| {
                     x.as_ref().map(|x| {
-                        let z = AsRef::<[[u8; { F::FIELD_BYTES }]]>::as_ref(&x)[i];
+                        let z = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(&x)[i];
                         Additive::from_be_bytes(
                             z[..].try_into().expect("F::FIELD_BYTES and FieldAdd>::FIELD_BYTES are the same. q.e.d"),
                         )

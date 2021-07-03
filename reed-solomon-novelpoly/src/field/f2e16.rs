@@ -24,7 +24,6 @@ include!("inc_logarithm.rs");
 #[cfg(table_bootstrap_complete)]
 include!("inc_afft.rs");
 
-
 #[test]
 fn embedded_gf256() {
     // We've a leaky to_multiplier abstraction that fucks up zero, so start at 1.
@@ -35,29 +34,28 @@ fn embedded_gf256() {
             let j = Additive(j as Elt);
             assert!(j.mul(i).0 & mask == 0);
         }
-    }    
+    }
 }
-
 
 #[test]
 fn flt_roundtrip_small() {
-	const N: usize = 16;
-	const EXPECTED: [Additive; N] =
-		unsafe { std::mem::transmute([1_u16, 2, 3, 5, 8, 13, 21, 44, 65, 0, 0xFFFF, 2, 3, 5, 7, 11]) };
+    const N: usize = 16;
+    const EXPECTED: [Additive; N] =
+        unsafe { std::mem::transmute([1_u16, 2, 3, 5, 8, 13, 21, 44, 65, 0, 0xFFFF, 2, 3, 5, 7, 11]) };
 
-	let mut data = EXPECTED.clone();
+    let mut data = EXPECTED.clone();
 
-	afft(&mut data, N, N / 4);
+    afft(&mut data, N, N / 4);
 
     /*
-	println!("novel basis(rust):");
-	data.iter().for_each(|sym| {
-		print!(" {:04X}", sym.0);
-	});
-	println!("");
+    println!("novel basis(rust):");
+    data.iter().for_each(|sym| {
+        print!(" {:04X}", sym.0);
+    });
+    println!("");
     */
 
-	inverse_afft(&mut data, N, N / 4);
+    inverse_afft(&mut data, N, N / 4);
 
     assert_eq!(data, EXPECTED);
 }

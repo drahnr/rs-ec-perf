@@ -1,3 +1,5 @@
+#![feature(const_generics)]
+#![feature(const_evaluatable_checked)]
 // Encoding/erasure decoding for Reed-Solomon codes over binary extension fields
 //
 // Derived impl of `RSAErasureCode.c`.
@@ -197,7 +199,7 @@ where
             }
         }
 
-        return Ok(uniform_shard_len);
+        return Ok(uniform_shard_len / F::FIELD_BYTES);
     }
 
     ///make set of the shard to have exactly as many shard as
@@ -222,8 +224,15 @@ where
     /// each shard contains one symbol of one run of erasure coding
     pub fn reconstruct<S: Shard<F>>(&self, received_shards: Vec<Option<S>>) -> Result<Vec<u8>>
     where
+        F: FieldAdd,
         [(); F::FIELD_SIZE]: Sized,
     {
+        let erasures = received_shards
+            .iter()
+            .map(|x| x.is_none()).collect::<Vec<bool>>();
+        
+        //println!("original erased shards: {:?}", erasures);
+
         let shard_len_in_syms = self.verify_reconstructiblity(&received_shards)?;
 
         let received_shards = self.equalize_shards_number_with_code_block_length(&received_shards);
@@ -237,6 +246,8 @@ where
             .map(|x| x.is_none())
             .inspect(|erased| existential_count += !*erased as usize)
             .collect::<Vec<bool>>();
+
+        //println!("erased shards: {:?}", erasures);
 
         if existential_count < self.k {
             return Err(Error::NeedMoreShards { have: existential_count, min: self.k, all: self.n });
@@ -254,10 +265,10 @@ where
                 .iter()
                 .map(|x| {
                     x.as_ref().map(|x| {
-                        let z = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(&x)[i];
-                        Additive::from_be_bytes(
-                            z[..].try_into().expect("F::FIELD_BYTES and FieldAdd>::FIELD_BYTES are the same. q.e.d"),
-                        )
+                        //let z = x.get_chunk(i);
+                        let z = AsRef::<[[u8; <F as FieldAdd>::FIELD_BYTES]]>::as_ref(&x)[i];
+                        //let z1 : [u8; Additive::FIELD_BYTES] = [z[0], z[1]];                        
+                        Additive::from_be_bytes(z[..].try_into().expect("F::FIELD_BYTES and FieldAdd>::FIELD_BYTES are the same. q.e.d"))
                     })
                 })
                 .collect::<Vec<Option<Additive>>>();

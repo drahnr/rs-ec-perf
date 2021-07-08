@@ -13,7 +13,10 @@ pub trait FieldAdd:
     type ElementAsBytes; // = [u8; Self::FIELD_BYTES];
 
     //fn get_internals(&self) -> Elm;
-    //fn to_be_bytes(&self) -> Self::ElementAsBytes;
+
+    fn to_be_bytes(&self) -> [u8; Self::FIELD_BYTES];
+    fn from_be_bytes(serialized_element: [u8; Self::FIELD_BYTES]) -> Self;
+
 }
 
 /// Paramaterized field multiplier representation
@@ -54,16 +57,20 @@ macro_rules! decl_field_additive {
             const ZERO: Additive = Additive(0);
             // const ONE: Additive = Additive(1);
 
-            // fn get_internals(&self) -> Elt{
-            //     self.0;
-            // }
-        }
+            fn to_be_bytes(&self) -> [u8; <Self as FieldAdd>::FIELD_BYTES] {
+                self.0.to_be_bytes()
+            }
 
-        impl AsRef<[u8; <Self as FieldAdd>::FIELD_BYTES]> for Additive {
-            fn as_ref(&self) -> &[u8; <Self as FieldAdd>::FIELD_BYTES] {
-                unimplemented!()
+            fn from_be_bytes(serialized_element: [u8; <Self as FieldAdd>::FIELD_BYTES]) -> Self {
+                Self(Elt::from_be_bytes(serialized_element))
             }
         }
+
+        // impl AsRef<[u8; <Self as FieldAdd>::FIELD_BYTES]> for Additive {
+        //     fn as_ref(&self) -> &[u8; <Self as FieldAdd>::FIELD_BYTES] {
+        //         unimplemented!()
+        //     }
+        // }
 
         impl Additive {
             #[inline(always)]
@@ -75,13 +82,6 @@ macro_rules! decl_field_additive {
                 Additive(x as Elt)
             }
 
-            pub fn to_be_bytes(&self) -> [u8; <Self as FieldAdd>::FIELD_BYTES] {
-                self.0.to_be_bytes()
-            }
-
-            pub fn from_be_bytes(serialized_element: [u8; <Self as FieldAdd>::FIELD_BYTES]) -> Self {
-                Self(Elt::from_be_bytes(serialized_element))
-            }
         }
 
         pub const FIELD_BITS: usize = Additive::FIELD_BITS;

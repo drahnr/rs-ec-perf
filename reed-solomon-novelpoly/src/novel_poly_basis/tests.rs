@@ -241,13 +241,16 @@ macro_rules! simplicissimus {
 
 simplicissimus!(case_0: validators: 2003, payload: 0; Err(Error::PayloadSizeIsZero));
 
+simplicissimus!(case_0p5: validators: 3, payload: 1);
+simplicissimus!(case_0p75: validators: 4, payload: 2);
+
 // Roughly one Elt per validator payload
 simplicissimus!(case_1: validators: 10, payload: 16);
 
-// Unit payload, but mayn validators
+// Unit payload, but many validators
 simplicissimus!(case_2: validators: 100, payload: 1);
 
-// Common case of way ore payload than validators
+// Common case of way more payload than validators
 simplicissimus!(case_3: validators: 4, payload: 100);
 
 // Way more validators than payload bytes

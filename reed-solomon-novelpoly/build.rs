@@ -1,4 +1,6 @@
 #![allow(unused)]
+#![feature(const_generics)]
+#![feature(const_evaluatable_checked)]
 
 use std::io;
 

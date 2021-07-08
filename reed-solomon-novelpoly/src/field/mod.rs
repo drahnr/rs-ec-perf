@@ -13,6 +13,7 @@ pub mod f256;
 pub mod f2e16;
 
 #[test]
+#[ignore]
 fn agreement_f2e16_with_f256() {
     use core::ops::Mul;
 

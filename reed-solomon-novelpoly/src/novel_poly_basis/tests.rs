@@ -191,6 +191,7 @@ fn roundtrip_for_large_messages() -> Result<()> {
     //	let sl = AsRef::<[[u8; 2]]>::as_ref(&shard).len();
     //	assert_eq!(shard_length, sl, "Shard #{} has an unxpected length {} (expected: {})", idx, sl, shard_length);
     // }
+
     let (received_shards, dropped_indices) = deterministic_drop_shards_clone(&mut shards, rs.n, rs.k);
 
     let reconstructed_payload = reconstruct::<WrappedShard>(received_shards, N_WANTED_SHARDS).unwrap();

@@ -112,6 +112,10 @@ where
     }
 
     pub fn encode<S: Shard<F>>(&self, bytes: &[u8]) -> Result<Vec<S>> {
+
+        println!("Original data");
+        println!("{:?}", bytes);
+        
         if bytes.is_empty() {
             return Err(Error::PayloadSizeIsZero);
         }
@@ -142,6 +146,7 @@ where
             assert!(!data_piece.is_empty());
             assert!(data_piece.len() <= k2);
             let encoding_run = self.encode_sub(data_piece)?;
+            println!("encoding_run at encode: {:?}", encoding_run);
             for val_idx in 0..validator_count {
                 shards[val_idx].set_chunk(
                     chunk_idx,
@@ -149,8 +154,15 @@ where
                         .try_into()
                         .expect("F::FIELD_BYTES and FieldAdd::FIELD_BYTES are the same. q.e.d"),
                 );
+
+                println!("shard evolution at encode");
+                Self::print_shards(&shards);
+
             }
         }
+
+        println!("original encoded shards at encode");
+        Self::print_shards(&shards);
         Ok(shards)
     }
 
@@ -207,18 +219,17 @@ where
     ///empty shards or removing extra shards.
     fn equalize_shards_number_with_code_block_length<'a, S: Shard<F>>(
         &self,
-        received_shards: &'a Vec<Option<S>>,
-    ) -> Vec<Option<&'a S>> {
+        received_shards: Vec<Option<S>>,
+    ) -> Vec<Option<S>> {
         let code_block_length = self.n;
         let gap = code_block_length.saturating_sub(received_shards.len()); //== max(code_block_length - self.as_ref().len(), 0): minimum number of missing shards, some received shard might be None
 
         //This might be too naive you might be removing none empty shards and leaving empty shards in place. nonetheless given the placement of the shard in the slice are important it is not possible to rescue beyond block length data without major restructuring of the reconstruction code
         received_shards
-            .iter()
-            .map(|s| s.as_ref())
+            .into_iter()
             .take(code_block_length)
             .chain(std::iter::repeat(None).take(gap))
-            .collect::<Vec<_>>()
+            .collect::<Vec<Option<S>>>()
     }
 
     /// each shard contains one symbol of one run of erasure coding
@@ -227,15 +238,16 @@ where
         F: FieldAdd,
         [(); F::FIELD_SIZE]: Sized,
     {
-        let erasures = received_shards
-            .iter()
-            .map(|x| x.is_none()).collect::<Vec<bool>>();
-        
         //println!("original erased shards: {:?}", erasures);
+        println!("original encoded shards at reconstrct:");
+        Self::print_optional_shards(&received_shards);
 
         let shard_len_in_syms = self.verify_reconstructiblity(&received_shards)?;
 
-        let received_shards = self.equalize_shards_number_with_code_block_length(&received_shards);
+        let received_shards = self.equalize_shards_number_with_code_block_length(received_shards);
+
+        println!("extended encoded shards at reconstrct:");
+        Self::print_optional_shards(&received_shards);
 
         assert_eq!(received_shards.len(), self.n);
 
@@ -273,12 +285,18 @@ where
                 })
                 .collect::<Vec<Option<Additive>>>();
 
+            println!("received_shards as additive at reconstruct: {:?}", decoding_run);
+
             assert_eq!(decoding_run.len(), self.n);
 
             // reconstruct from one set of symbols which was spread over all erasure chunks
             let piece = self.reconstruct_sub(&decoding_run[..], &erasures, &error_poly_in_log).unwrap();
             acc.extend_from_slice(&piece[..]);
         }
+
+        println!("Reconstructed data");
+        println!("{:?}", acc);
+
 
         Ok(acc)
     }
@@ -377,6 +395,8 @@ where
             .map(|(a, b)| Additive(Elt::from_be_bytes([a, b])))
             .collect::<Vec<Additive>>();
 
+        println!("data before being encoded {:?}", data);
+
         // update new data bytes with zero padded bytes
         // `l` is now `GF(2^16)` symbols
         let l = data.len();
@@ -437,6 +457,8 @@ where
             };
         }
 
+        println!("recoverd at reconst sub {:?}", recovered);
+
         let mut recovered_bytes = Vec::with_capacity(self.k * 2);
         recovered.into_iter().take(self.k).for_each(|x| recovered_bytes.extend_from_slice(&x.0.to_be_bytes()[..]));
         Ok(recovered_bytes)
@@ -472,15 +494,16 @@ where
     //TODO to check: This function was accepeting a parameter n but it was sent as FIELD_SIZE.
     // that looks like an unharmful bug
     pub fn eval_error_polynomial(&self, erasure: &[bool], log_walsh2: &mut [Logarithm]) {
-        let z = std::cmp::min(self.n, erasure.len());
+        let n = F::FIELD_SIZE;
+        let z = std::cmp::min(n, erasure.len());
         for i in 0..z {
             log_walsh2[i] = Logarithm(erasure[i] as Elt);
         }
-        for i in z..self.n {
+        for i in z..n {
             log_walsh2[i] = Logarithm(0);
         }
         walsh(log_walsh2, F::FIELD_SIZE);
-        for i in 0..self.n {
+        for i in 0..n {
             let tmp = log_walsh2[i].to_wide() * LOG_WALSH[i].to_wide();
             log_walsh2[i] = Logarithm((tmp % ONEMASK as Wide) as Elt);
         }
@@ -491,6 +514,24 @@ where
             }
         }
     }
+
+    
+    /// print received and recovered shard for debug reason
+    fn print_shards<S: Shard<F>>(shards: &Vec<S>) {
+        for (i, current_shard) in shards.iter().enumerate() {
+            println!("{}: {:?}", i, current_shard);
+        }
+        
+    }
+        
+    /// print received and recovered shard for debug reason
+    fn print_optional_shards<S: Shard<F>>(shards: &Vec<Option<S>>) {
+        for (i, current_shard) in shards.iter().enumerate() {
+            println!("{}: {:?}", i, current_shard);
+        }
+        
+    }
+
 }
 
 #[cfg(test)]

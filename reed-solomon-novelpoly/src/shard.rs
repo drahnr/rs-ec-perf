@@ -1,4 +1,5 @@
 use std::iter;
+use std::fmt::Debug;
 use crate::field::FieldAdd;
 use crate::errors::*;
 
@@ -10,6 +11,7 @@ pub trait Shard<F: FieldAdd>:
     + AsRef<[[u8; F::FIELD_BYTES]]>
     + iter::FromIterator<[u8; F::FIELD_BYTES]>
     + From<Vec<u8>>
+    + Debug
 where
     [u8; F::FIELD_BYTES]: Sized,
 {
@@ -33,7 +35,9 @@ where
         + AsMut<[[u8; F::FIELD_BYTES]]>
         + AsRef<[[u8; F::FIELD_BYTES]]>
         + iter::FromIterator<[u8; F::FIELD_BYTES]>
-    + From<Vec<u8>>,
+    + From<Vec<u8>>
+    + Debug
+    ,
     F: FieldAdd,
     [u8; F::FIELD_BYTES]: Sized,
 {

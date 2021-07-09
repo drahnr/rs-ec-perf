@@ -139,8 +139,13 @@ where
 	// for feeding into reconstruct_shards
 	let mut received_shards = shards.into_iter().map(Some).collect::<Vec<Option<S>>>();
 
+    //    //don't drop for now
 	let dropped_indices =
 		drop_rand(received_shards.as_mut_slice(), target_shard_count, target_shard_count / 3, &mut rng);
+    //let mut v : Vec::<usize> = vec![];
+	//let dropped_indices = IndexVec::from(v);
+    println!("we dropped: {:?}", dropped_indices);
+
 
 	let recovered_payload = reconstruct(received_shards, target_shard_count)?;
 

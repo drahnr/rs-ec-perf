@@ -1,16 +1,26 @@
 #[cfg(table_bootstrap_complete)]
 use super::*;
 
-pub type Elt = u8;
-pub type Wide = u16;
-decl_field_additive!("f256", bits = 8);
+struct f256;
 
-/// Quotient ideal generator given by tail of irreducible polynomial
-// Valid Cantor basis, passes embedded_gf16
-pub const GENERATOR: Elt = 0x1D; //GF(2^8): x^8 + x^4 + x^3 + x^2 + 1
+impl FieldAdd for f256 
+{
+    type Element = u8;    
+    const FIELD_BITS : usize = 8;
+    
+    /// Quotient ideal generator given by tail of irreducible polynomial
+    // Valid Cantor basis, passes embedded_gf16
+    const GENERATOR: Self::Element = 0x1D; //GF(2^8): x^8 + x^4 + x^3 + x^2 + 1
                                  // pub const GENERATOR: Elt = 0x71; //GF(2^8): z^8 + z^6 + z^5 + z^4 + 1
                                  // pub const GENERATOR: Elt = 0x2B; //GF(2^8): x^8 + x^5 + x^3 + x + 1
                                  // pub const GENERATOR: Elt = 0x2D; //GF(2^8): x^8 + x^5 + x^3 + x^2 + 1
+
+    /// Cantor basis' final element
+    const BASE_FINAL: Self::Element = 230;
+    const FIELD_NAME: &'static str = "f256";
+
+}
+
 
 // Valid Cantor basis, but fails embedded_gf16
 
@@ -30,14 +40,12 @@ pub const GENERATOR: Elt = 0x1D; //GF(2^8): x^8 + x^4 + x^3 + x^2 + 1
 //     pub const ONE: Additive = Additive(???);
 // }
 
-/// Cantor basis' final element
-pub const BASE_FINAL: Elt = 230;
 // pub const BASE_FINAL: Elt = 238;
 
 // /// Cantor basis
 // pub const BASE: [Elt; FIELD_BITS] = [1, 214, 152, 146, 86, 200, 88, 230];
 
-include!("inc_logarithm.rs");
+//include!("inc_logarithm.rs");
 
 #[cfg(table_bootstrap_complete)]
 include!("inc_afft.rs");

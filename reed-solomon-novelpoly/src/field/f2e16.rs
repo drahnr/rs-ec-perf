@@ -3,10 +3,21 @@ use super::*;
 
 pub type Elt = u16;
 pub type Wide = u32;
-decl_field_additive!("f2e16", bits = 16);
 
-/// Quotient ideal generator given by tail of irreducible polynomial
-pub const GENERATOR: Elt = 0x2D; // x^16 + x^5 + x^3 + x^2 + 1
+struct f2e16;
+
+impl FieldAdd for f2e16 {
+    type Element = u16;     
+    const FIELD_BITS : usize = 16;
+
+    /// Quotient ideal generator given by tail of irreducible polynomial
+    const GENERATOR: Self::Element = 0x2D; // x^16 + x^5 + x^3 + x^2 + 1    
+
+    const FIELD_NAME: &'static str = "f256";
+
+}
+
+
 
 // impl Additive {
 //     pub const ONE: Additive = Additive(???);
@@ -19,7 +30,7 @@ pub const GENERATOR: Elt = 0x2D; // x^16 + x^5 + x^3 + x^2 + 1
 /// Cantor basis' final element
 pub const BASE_FINAL: Elt = 39198;
 
-include!("inc_logarithm.rs");
+//include!("inc_logarithm.rs");
 
 #[cfg(table_bootstrap_complete)]
 include!("inc_afft.rs");

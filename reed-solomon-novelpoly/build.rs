@@ -1,6 +1,7 @@
 #![allow(unused)]
 #![feature(const_generics)]
 #![feature(const_evaluatable_checked)]
+#![feature(associated_type_defaults)]
 
 use std::io;
 

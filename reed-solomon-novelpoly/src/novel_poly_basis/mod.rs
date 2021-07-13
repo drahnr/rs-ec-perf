@@ -11,33 +11,12 @@ use std::marker::PhantomData;
 use std::convert::TryInto;
 
 use crate::errors::*;
-use crate::f2e16::*;
 use crate::{Shard};
 use crate::field::afft::*;
 use crate::field::FieldAdd;
 
 //use crate::shard::ShardHold;
-
 pub use super::util::*;
-
-use super::field::f2e16;
-
-/// each shard contains one symbol of one run of erasure coding
-pub fn reconstruct<S: Shard<f2e16::Additive>>(
-    received_shards: Vec<Option<S>>,
-    validator_count: usize,
-) -> Result<Vec<u8>> {
-    let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
-
-    rs.reconstruct(received_shards)
-}
-
-pub fn encode<S: Shard<f2e16::Additive>>(bytes: &[u8], validator_count: usize) -> Result<Vec<S>> {
-    let rs = ReedSolomon::<f2e16::Additive>::new(validator_count, recoverablity_subset_size(validator_count))?;
-
-    rs.encode::<S>(bytes)
-}
-
 /// Reed-Solomon erasure code encoder/decoder.
 /// # Example
 ///
@@ -103,7 +82,7 @@ where
         // which is true by definition
         assert!(n * k_po2 <= n_po2 * k);
 
-        if n_po2 > FIELD_SIZE as usize {
+        if n_po2 > F::FIELD_SIZE as usize {
             return Err(Error::WantedShardCountTooHigh(n));
         }
 
@@ -266,7 +245,7 @@ where
         }
 
         //Evaluate error locator polynomial only once
-        let mut error_poly_in_log = [Logarithm(0); F::FIELD_SIZE];
+        let mut error_poly_in_log = [F::Logarithm(0); F::FIELD_SIZE];
         let mut error_poly_in_log = vec![Logarithm(0); F::FIELD_SIZE];
         self.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
 

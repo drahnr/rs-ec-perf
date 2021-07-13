@@ -10,8 +10,8 @@ use rand::seq::index::IndexVec;
 use rand::thread_rng;
 use reed_solomon_tester::*;
 
-use crate::novel_poly_basis::ReedSolomon;
-use crate::novel_poly_basis::reconstruct;
+use crate::novel_poly_basis::{ReedSolomon};
+use crate::availibility_util::{reconstruct,encode};
 
 use std::marker::PhantomData;
 

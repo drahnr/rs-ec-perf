@@ -1,5 +1,6 @@
 
 pub use core::ops::{Mul, MulAssign};
+use derive_more::{Add, AddAssign, BitXor, BitXorAssign, Sub, SubAssign, AsRef};
 
 include!("inc_cantor_basis.rs");
 

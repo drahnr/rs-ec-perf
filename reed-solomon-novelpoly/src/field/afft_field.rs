@@ -123,7 +123,7 @@ pub trait AfftField : FieldAdd where [(); Self::FIELD_BYTES]: Sized,
 
     /// TODO: Why this is not part of AfftField trait?
     /// Inverse additive FFT in the "novel polynomial basis"
-    fn inverse_afft(&self, data: &mut [Additive<Self>], size: usize, index: usize)
+    fn inverse_afft(data: &mut [Additive<Self>], size: usize, index: usize)
     where <<Self as FieldAdd>::Wide as TryInto<<Self as FieldAdd>::Element>>::Error: core::fmt::Debug,
     [(); Self::FIELD_BYTES]: Sized,
     [(); Self::ONEMASK_USIZE]: Sized,
@@ -180,7 +180,7 @@ pub trait AfftField : FieldAdd where [(); Self::FIELD_BYTES]: Sized,
     }
     
     /// Additive FFT in the "novel polynomial basis"
-    fn afft(&self, data: &mut [Additive<Self>], size: usize, index: usize)
+    fn afft(data: &mut [Additive<Self>], size: usize, index: usize)
     where [u8; Self::FIELD_BYTES]: Sized,
     <Self::Wide as TryInto<<Self as FieldAdd>::Element>>::Error : core::fmt::Debug,
     //[(); F::ONEMASK_USIZE]: Sized,

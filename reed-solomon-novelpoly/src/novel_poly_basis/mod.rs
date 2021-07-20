@@ -1,5 +1,6 @@
 #![feature(const_generics)]
 #![feature(const_evaluatable_checked)]
+#![feature(array_windows)]
 // Encoding/erasure decoding for Reed-Solomon codes over binary extension fields
 //
 // Derived impl of `RSAErasureCode.c`.
@@ -9,10 +10,11 @@
 
 use std::marker::PhantomData;
 use std::convert::TryInto;
+use core::ops::{Mul};
 
 use crate::errors::*;
 use crate::{Shard};
-use crate::field::{FieldAdd, TruncateTo, Logarithm, Additive, walsh, AfftField, tweaked_formal_derivative};
+use crate::field::{FieldAdd, FieldMul, TruncateTo, Logarithm, Additive, walsh, AfftField, tweaked_formal_derivative};
 use crate::field::macros;
 
 //use crate::shard::ShardHold;
@@ -40,8 +42,10 @@ pub struct ReedSolomon<F: AfftField> where
 
 impl<F: AfftField> ReedSolomon<F>
 where
-    [u8; F::FIELD_BYTES]: Sized,
+ [u8; F::FIELD_BYTES]: Sized,
 [(); F::FIELD_BYTES]: Sized,
+[(); F::ONEMASK_USIZE]: Sized,
+[(); F::FIELD_SIZE >> 1]: Sized,
 <F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug
 {
     /// Returns the total number of data shard
@@ -243,31 +247,31 @@ where
             .inspect(|erased| existential_count += !*erased as usize)
             .collect::<Vec<bool>>();
 
-        //println!("erased shards: {:?}", erasures);
+        println!("erased shards: {:?}", erasures);
 
         if existential_count < self.k {
-            return Err(Error::NeedMoreShards { have: existential_count, min: self.k, all: self.n });
+             return Err(Error::NeedMoreShards { have: existential_count, min: self.k, all: self.n });
         }
 
-        //Evaluate error locator polynomial only once
-        let mut error_poly_in_log = [Logarithm::<F>(0); F::FIELD_SIZE];
-        let mut error_poly_in_log = vec![Logarithm::<F>(0); F::FIELD_SIZE];
+        // //Evaluate error locator polynomial only once
+        let mut error_poly_in_log = [Logarithm::<F>(F::ZERO_ELEMENT); F::FIELD_SIZE];
+        let mut error_poly_in_log = vec![Logarithm::<F>(F::ZERO_ELEMENT); F::FIELD_SIZE];
         self.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
 
         let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);
         for i in 0..shard_len_in_syms {
-            // take the i-th element of all shards and try to recover
-            let decoding_run = received_shards
-                .iter()
-                .map(|x| {
-                    x.as_ref().map(|x| {
+             // take the i-th element of all shards and try to recover
+             let decoding_run = received_shards
+                 .iter()
+                 .map(|x| {
+                     x.as_ref().map(|x| {
                         //let z = x.get_chunk(i);
                         let z = AsRef::<[[u8; <F as FieldAdd>::FIELD_BYTES]]>::as_ref(&x)[i];
                         //let z1 : [u8; Additive::FIELD_BYTES] = [z[0], z[1]];                        
                         Additive::<F>::from_be_bytes(z[..].try_into().expect("F::FIELD_BYTES and FieldAdd>::FIELD_BYTES are the same. q.e.d"))
                     })
                 })
-                .collect::<Vec<Option<Additive>>>();
+                .collect::<Vec<Option<Additive<F>>>>();
 
             println!("received_shards as additive at reconstruct: {:?}", decoding_run);
 
@@ -328,7 +332,7 @@ where
 
         // mem_zero(&mut parity[0..t]);
         for i in 0..t {
-            parity[i] = Additive(0);
+            parity[i] = Additive::<F>(F::ZERO_ELEMENT);
         }
 
         let mut i = t;
@@ -370,13 +374,14 @@ where
         // pad the incoming bytes with trailing 0s
         // so we get a buffer of size `N` in `GF` symbols
         let zero_bytes_to_add = self.n * 2 - dl;
+        let data: Vec<Additive<F>> = vec![Additive::<F>(F::ZERO_ELEMENT); self.n];
         let data: Vec<Additive<F>> = bytes
             .into_iter()
             .copied()
-            .chain(std::iter::repeat(0u8).take(zero_bytes_to_add))
-            .tuple_windows()
-            .step_by(2)
-            .map(|(a, b)| Additive::<F>(F::from_be_bytes_to_element([a, b])))
+            .chain(std::iter::repeat(0u8).take(zero_bytes_to_add)).collect::<Vec<u8>>()
+            .array_windows::<{ F::FIELD_BYTES }>()
+            .step_by(F::FIELD_BYTES)
+            .map(|a| Additive::<F>(F::from_be_bytes_to_element(*a)))
             .collect::<Vec<Additive<F>>>();
 
         println!("data before being encoded {:?}", data);
@@ -444,7 +449,7 @@ where
         println!("recoverd at reconst sub {:?}", recovered);
 
         let mut recovered_bytes = Vec::with_capacity(self.k * 2);
-        recovered.into_iter().take(self.k).for_each(|x| recovered_bytes.extend_from_slice(&x.0.to_be_bytes()[..]));
+        recovered.into_iter().take(self.k).for_each(|x| recovered_bytes.extend_from_slice(&F::from_element_to_be_bytes(x.0)[..]));
         Ok(recovered_bytes)
     }
 
@@ -458,7 +463,7 @@ where
         assert_eq!(erasure.len(), self.n);
 
         for i in 0..self.n {
-            codeword[i] = if erasure[i] { Additive::<F>(F::ZERO_ELEMENT) } else { codeword[i].mul(log_walsh2[i]) };
+            codeword[i] = if erasure[i] { Additive::<F>(F::ZERO_ELEMENT) } else { Mul::<Logarithm<F>>::mul(codeword[i],log_walsh2[i]) };
         }
 
         F::inverse_afft(codeword, self.n, 0);
@@ -489,12 +494,12 @@ where
         walsh(log_walsh2, F::FIELD_SIZE);
         for i in 0..n {
             let tmp = log_walsh2[i].to_wide() * F::LOG_WALSH[i].to_wide();
-            log_walsh2[i] = Logarithm::<F>((tmp % F::ONEMASK_WIDE).truncate());
+            log_walsh2[i] = Logarithm::<F>(TruncateTo::<F>::truncate(tmp % F::ONEMASK_WIDE));
         }
         walsh(log_walsh2, F::FIELD_SIZE);
         for i in 0..z {
             if erasure[i] {
-                log_walsh2[i] = Logarithm::<F>(F::ONEMASK) - log_walsh2[i];
+                log_walsh2[i] = Logarithm::<F>(Logarithm::<F>(F::ONEMASK).0 - log_walsh2[i].0);
             }
         }
     }

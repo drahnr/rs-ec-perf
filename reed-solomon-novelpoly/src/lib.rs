@@ -3,6 +3,7 @@
 #![feature(const_evaluatable_checked)]
 #![feature(destructuring_assignment)]
 #![feature(associated_type_defaults)]
+#![feature(array_windows)]
 
 pub mod errors;
 pub use errors::*;

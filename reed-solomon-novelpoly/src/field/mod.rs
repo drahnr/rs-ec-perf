@@ -8,7 +8,6 @@ use crate::util::*;
 #[macro_use]
 pub mod macros;
 mod traits;
-mod afft_table;
 mod afft_field;
 mod afft_util;
 

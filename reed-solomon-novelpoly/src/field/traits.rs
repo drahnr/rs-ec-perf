@@ -12,12 +12,12 @@ pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self>
     const FIELD_SIZE: usize = 1_usize << Self::FIELD_BITS;
     const FIELD_NAME: &'static str;
     
-    type Element : Sized + Clone + Copy + core::fmt::Debug + Default + PartialEq<Self::Element> + Eq + BitXor<Self::Element, Output = Self::Element> + BitXorAssign<Self::Element> + TryFrom<Self::Wide> + Integer + core::ops::AddAssign +  core::ops::SubAssign + Shl<usize, Output = Self::Element> + Shr<usize, Output = Self::Element> +  Into<usize> + Into<Self::Wide> + TryFrom<usize> + Into<usize> + Default;
+    type Element : Sized + Clone + Copy + core::fmt::Debug + Default + PartialEq<Self::Element> + Eq + BitXor<Self::Element, Output = Self::Element> + BitXorAssign<Self::Element> + TryFrom<Self::Wide> + Integer + core::ops::AddAssign +  core::ops::SubAssign + Shl<usize, Output = Self::Element> + Shr<usize, Output = Self::Element> +  Into<usize> + Into<Self::Wide> + TryFrom<usize> + Into<usize> + Default + From<bool>;
     type Wide: Copy + Integer + BitAnd<Self::Wide, Output = Self::Wide>  + Shl<usize, Output = Self::Wide> + Shr<usize, Output = Self::Wide> + BitXor<Self::Wide, Output = Self::Wide> + BitXorAssign<Self::Wide> + TryInto<Self::Element> + From<Self::Element>;
     // const ONE: Self;
     type BaseArray;
     type FieldTableArray : Index<usize, Output=Self::Element>; //TODO: just index over the field elemennts arrays are not that sexy.
-    type LogWalshTable;
+    type LogWalshTable : Index<usize, Output=Logarithm<Self>>;
     type AfftSkewTable : Index<usize, Output=Logarithm<Self>>;
 
     /// Quotient ideal generator given by tail of irreducible polynomial

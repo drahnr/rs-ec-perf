@@ -1,14 +1,21 @@
 #![feature(const_generics)]
 #![feature(const_evaluatable_checked)]
+#![feature(destructuring_assignment)]
 
 use crate::errors::*;
 use crate::util::*;
 
 #[macro_use]
+pub mod macros;
 mod traits;
-pub use traits::{FieldAdd, FieldMul};
+mod afft_table;
+mod afft_field;
+mod afft_util;
 
-pub mod afft;
+pub use traits::{FieldAdd, FieldMul, TruncateTo, Logarithm, walsh, Additive};
+pub use afft_util::{tweaked_formal_derivative};
+pub use afft_field::{AfftField};
+
 pub mod f256;
 pub mod f2e16;
 

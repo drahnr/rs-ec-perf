@@ -2,11 +2,13 @@
 #![feature(const_generics)]
 #![feature(const_evaluatable_checked)]
 #![feature(associated_type_defaults)]
+#![feature(destructuring_assignment)]
 
 use std::io;
 
 include!("src/util.rs");
 include!("src/field/traits.rs");
+include!("src/field/macros.rs");
 
 mod f2e16 {
     include!("inc_gen_field_tables.rs");
@@ -44,8 +46,8 @@ fn gen_ffi_novel_poly_basis_bindgen() {
 }
 
 fn main() -> io::Result<()> {
-    f2e16::gen_field_tables()?;
-    f256::gen_field_tables()?;
+    f2e16::gen_field_tables::<f2e16::F2e16>()?;
+    f256::gen_field_tables::<f256::F256>()?;
     // to avoid a circular loop, we need to import a dummy
     // table, such that we do not depend on the thing we are
     // about to spawn

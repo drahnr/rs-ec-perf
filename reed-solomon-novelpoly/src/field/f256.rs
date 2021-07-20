@@ -1,29 +1,12 @@
 #[cfg(table_bootstrap_complete)]
 use super::*;
+use crate::{FieldAdd, TruncateTo, Logarithm, walsh};
 
-struct f256;
-
-impl FieldAdd for f256 
-{
-    type Element = u8;    
-    const FIELD_BITS : usize = 8;
-    
-    /// Quotient ideal generator given by tail of irreducible polynomial
-    // Valid Cantor basis, passes embedded_gf16
-    const GENERATOR: Self::Element = 0x1D; //GF(2^8): x^8 + x^4 + x^3 + x^2 + 1
-                                 // pub const GENERATOR: Elt = 0x71; //GF(2^8): z^8 + z^6 + z^5 + z^4 + 1
-                                 // pub const GENERATOR: Elt = 0x2B; //GF(2^8): x^8 + x^5 + x^3 + x + 1
-                                 // pub const GENERATOR: Elt = 0x2D; //GF(2^8): x^8 + x^5 + x^3 + x^2 + 1
-
-    /// Cantor basis' final element
-    const BASE_FINAL: Self::Element = 230;
-    const FIELD_NAME: &'static str = "f256";
-
-}
-
+decl_field_additive!(F256, bits = 8, generator = 0x1D, elt = u8, wide = u16, cantor_base_final_elt = 230);
+//    const AFFT_TABLES: AfftTables<F> = AfftTables::<F>::initialize();
 
 // Valid Cantor basis, but fails embedded_gf16
-
+//pub const GENERATOR: Elt = 0x1D; //GF(2^8): x^8 + x^4 + x^3 + x^2 + 1
 // Valid Cantor basis, but fails both embedded_gf16 and b_is_one.
 // pub const GENERATOR: Elt = 0x1B; //GF(2^8): x^8 + x^4 + x^3 + x + 1
 // pub const GENERATOR: Elt = 0x3F; //GF(2^8): x^8 + x^5 + x^4 + x^3 + x^2 + x + 1
@@ -47,5 +30,6 @@ impl FieldAdd for f256
 
 //include!("inc_logarithm.rs");
 
-#[cfg(table_bootstrap_complete)]
-include!("inc_afft.rs");
+
+//#[cfg(table_bootstrap_complete)]
+//include!("inc_afft.rs");

@@ -1,6 +1,8 @@
 #![forbid(unused_crate_dependencies)]
 #![feature(const_generics)]
 #![feature(const_evaluatable_checked)]
+#![feature(destructuring_assignment)]
+#![feature(associated_type_defaults)]
 
 pub mod errors;
 pub use errors::*;
@@ -11,6 +13,10 @@ pub use util::*;
 pub mod field;
 pub use self::field::f256;
 pub use self::field::f2e16;
+pub use self::field::{FieldAdd, FieldMul, TruncateTo, Logarithm, walsh, Additive, AfftField};
+
+#[macro_use]
+pub use self::field::macros;
 
 mod novel_poly_basis;
 pub use self::novel_poly_basis::*;

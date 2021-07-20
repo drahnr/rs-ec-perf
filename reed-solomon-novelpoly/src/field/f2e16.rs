@@ -1,39 +1,13 @@
 #[cfg(table_bootstrap_complete)]
 use super::*;
+use std::convert::From;
+use crate::{FieldAdd, TruncateTo, Logarithm, walsh, Additive};
 
-pub type Elt = u16;
-pub type Wide = u32;
-
-struct f2e16;
-
-impl FieldAdd for f2e16 {
-    type Element = u16;     
-    const FIELD_BITS : usize = 16;
-
-    /// Quotient ideal generator given by tail of irreducible polynomial
-    const GENERATOR: Self::Element = 0x2D; // x^16 + x^5 + x^3 + x^2 + 1    
-
-    const FIELD_NAME: &'static str = "f256";
-
-}
+decl_field_additive!(F2e16, bits = 16, generator = 0x2D, elt = u16, wide = u32, cantor_base_final_elt = 39198);
 
 
-
-// impl Additive {
-//     pub const ONE: Additive = Additive(???);
-// }
-
-// Cantor basis
-// pub const BASE: [Elt; FIELD_BITS] =
-//    [1_u16, 44234, 15374, 5694, 50562, 60718, 37196, 16402, 27800, 4312, 27250, 47360, 64952, 64308, 65336, 39198];
-
-/// Cantor basis' final element
-pub const BASE_FINAL: Elt = 39198;
-
-//include!("inc_logarithm.rs");
-
-#[cfg(table_bootstrap_complete)]
-include!("inc_afft.rs");
+// #[cfg(table_bootstrap_complete)]
+// include!("inc_afft.rs");
 
 #[test]
 fn embedded_gf256() {

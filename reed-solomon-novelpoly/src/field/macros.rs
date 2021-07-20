@@ -1,0 +1,62 @@
+/// Declare field and include its tables
+///
+/// Requires Elt and Wide be defined previosuly.
+macro_rules! decl_field_additive {
+ 	($name: tt, bits = $fbits:literal, generator = $generator: literal, elt = $elt:tt, wide = $wide:tt, cantor_base_final_elt = $cantor_base_final_elt: literal) => {
+
+        #[derive(Clone, Copy,Debug, Default, PartialEq, Eq)]
+        pub struct $name;
+        impl FieldAdd for $name
+        {
+            type Element = $elt;
+            type Wide = $wide;
+            const FIELD_BITS : usize = $fbits;
+
+            type BaseArray = [Self::Element; Self::FIELD_BITS];
+            type FieldTableArray = [Self::Element; Self::FIELD_SIZE];
+            type LogWalshTable = [Logarithm::<Self>; Self::FIELD_SIZE];
+            type AfftSkewTable = [Logarithm::<Self>; Self::ONEMASK_USIZE];
+            /// Quotient ideal generator given by tail of irreducible polynomial
+            const GENERATOR: Self::Element = $generator;
+
+            const FIELD_NAME: &'static str = stringify!($name);
+
+            const ZERO_ELEMENT: Self::Element = 0 as $elt;
+            const ONE_ELEMENT: Self::Element = 1 as $elt;
+            const ZERO_ELEMENT_WIDE: Self::Wide  = 0 as $wide;
+            const ONE_ELEMENT_WIDE: Self::Wide = 1 as $wide;
+            const ONEMASK: Self::Element = (Self::FIELD_SIZE - 1) as $elt;
+            const ONEMASK_USIZE: usize = (Self::FIELD_SIZE - 1) as usize;
+            const ONEMASK_WIDE: Self::Wide = (Self::FIELD_SIZE - 1) as $wide;
+
+            const BASE_FINAL: Self::Element = $cantor_base_final_elt;
+
+            fn from_be_bytes_to_element(bytes: [u8; Self::FIELD_BYTES]) -> Self::Element {
+                Self::Element::from_be_bytes(bytes)
+            }
+
+            fn from_element_to_be_bytes(element: Self::Element) -> [u8; Self::FIELD_BYTES] {
+                element.to_be_bytes()
+            }
+
+            //#[cfg(table_bootstrap_complete)]
+ 		    //include!(concat!(env!("OUT_DIR"), "/table_", stringify!($name), ".rs"));
+
+            //#[cfg(not(table_bootstrap_complete))]
+            const BASE: [Self::Element; Self::FIELD_BITS] = [Self::ZERO_ELEMENT; Self::FIELD_BITS];
+            //#[cfg(not(table_bootstrap_complete))]
+            const LOG_TABLE: [Self::Element; Self::FIELD_SIZE] = [Self::ZERO_ELEMENT; Self::FIELD_SIZE];
+            //#[cfg(not(table_bootstrap_complete))]
+            const EXP_TABLE: [Self::Element; Self::FIELD_SIZE] = [Self::ZERO_ELEMENT; Self::FIELD_SIZE];
+            //#[cfg(not(table_bootstrap_complete))]
+            const LOG_WALSH: [Logarithm::<Self>; Self::FIELD_SIZE] = [Logarithm(Self::ZERO_ELEMENT); Self::FIELD_SIZE];          
+            //#[cfg(not(table_bootstrap_complete))]
+            /// Logarithm form of twisted factors used in our additive FFT
+            const AFFT_SKEW_TABLE: [Logarithm<Self>; Self::ONEMASK_USIZE] = [Logarithm(Self::ZERO_ELEMENT); Self::ONEMASK_USIZE] ;
+        }
+
+
+ 	};
+
+        
+ } // macro_rules! decl_field_additive

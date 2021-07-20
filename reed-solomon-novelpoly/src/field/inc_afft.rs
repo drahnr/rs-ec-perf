@@ -1,11 +1,10 @@
 
-
+use traits::*;
 use static_init::{dynamic};
 
 // use core::ops::Mul;
 
 use super::afft::*;
-
 
 #[dynamic(0)]
 pub static AFFT_TABLES: AfftTables = AfftTables::initalize();
@@ -13,24 +12,24 @@ pub static AFFT_TABLES: AfftTables = AfftTables::initalize();
 /// Additive FFT and IFFT skew table and formal derivative transform table
 /// for computing Reed-Solomon in the "novel polynomial basis".
 #[allow(non_snake_case)]
-pub struct AfftTables {
+pub struct AfftTables<F: FieldAdd> {
     /// Logarithm form of twisted factors used in our additive FFT
-    pub skews: [Logarithm; ONEMASK as usize], // skew_multiplier
+    pub skews: [Logarithm<F>; F::ONEMASK.into()], // skew_multiplier
     /// Factors used in formal derivative, actually all zero if field was constructed correctly.
-    pub B: [Logarithm; FIELD_SIZE >> 1],
+    pub B: [Logarithm<F>; F::FIELD_SIZE >> 1],
 }
 
 
 /// Formal derivative of polynomial in tweaked?? basis
 #[allow(non_snake_case)]
-pub fn tweaked_formal_derivative(codeword: &mut [Additive], n: usize) {
+pub fn tweaked_formal_derivative<F: FieldAdd>(codeword: &mut [Additive<F>], n: usize) {
     #[cfg(b_is_not_one)]
     let B = unsafe { &AFFT_TABLES.B };
 
     // We change nothing when multiplying by b from B.
 	#[cfg(b_is_not_one)]
 	for i in (0..n).into_iter().step_by(2) {
-		let b = Logarithm(ONEMASK) - B[i >> 1];
+		let b = Logarithm::<F>(F::ONEMASK) - B[i >> 1];
 		codeword[i] = codeword[i].mul(b);
 		codeword[i + 1] = codeword[i + 1].mul(b);
 	}
@@ -71,8 +70,8 @@ fn b_is_one() {
 }
 
 
-impl AfftField for Additive {
-    type Multiplier = Logarithm;
+impl<F: FieldAdd> AfftField for Additive<F> {
+    type Multiplier = Logarithm<F>;
 
     #[inline(always)]
     fn compute_skew(_depart_no: usize, j: usize, index: usize) -> Option<Self::Multiplier> {
@@ -88,39 +87,39 @@ impl AfftField for Additive {
 
 		// It's reasonale to skip the loop if skew is zero, but doing so with
 		// all bits set requires justification.	 (TODO)
-		if old_skew.0 != ONEMASK { Some(old_skew) } else { None }
+		if old_skew.0 != F::ONEMASK { Some(old_skew) } else { None }
     }
 }
 
 
-impl AfftTables {
+impl<F: FieldAdd> AfftTables<F> {
 
     /// Initialize SKEW_FACTOR and B
     #[allow(non_snake_case)]
     fn initalize() -> AfftTables {
         // We cannot yet identify if base has an additive or multiplicative
         // representation, or mybe something else entirely.  (TODO)
-    	let mut base: [Elt; FIELD_BITS - 1] = Default::default();
+    	let mut base: [F::Element; F::FIELD_BITS - 1] = Default::default();
 
-        let mut skews_additive = [Additive(0); ONEMASK as usize];
+        let mut skews_additive = [Additive(0); F::ONEMASK as usize];
 
-    	for i in 1..FIELD_BITS {
+    	for i in 1..F::FIELD_BITS {
     		base[i - 1] = 1 << i;
     	}
 
     	// We construct SKEW_FACTOR in additive form to be \bar{s}_j(omega)
     	// from page 6285 for all omega in the field.
-    	for m in 0..(FIELD_BITS - 1) {
+    	for m in 0..(F::FIELD_BITS - 1) {
     		let step = 1 << (m + 1);
-    		skews_additive[(1 << m) - 1] = Additive(0);
-    		for i in m..(FIELD_BITS - 1) {
+    		skews_additive[(1 << m) - 1] = Additive::<F>(0);
+    		for i in m..(F::FIELD_BITS - 1) {
     			let s = 1 << (i + 1);
 
     			let mut j = (1 << m) - 1;
     			while j < s {
     				// Justified by (5) page 6285, except..
     				// we expect SKEW_FACTOR[j ^ field_base[i]] or similar
-    				skews_additive[j + s] = skews_additive[j] ^ Additive(base[i]);
+    				skews_additive[j + s] = skews_additive[j] ^ Additive::<F>(base[i]);
     				j += step;
     			}
     		}
@@ -130,51 +129,51 @@ impl AfftTables {
     		// TODO: But why?
     		//
     		// let idx = mul_table(base[m], LOG_TABLE[(base[m] ^ 1_u16) as usize]);
-    		let idx = Additive(base[m]).mul( Additive(base[m] ^ 1).to_multiplier() );
+    		let idx = Additive::<F>(base[m]).mul( Additive::<F>(base[m] ^ 1).to_multiplier() );
             // WTF?!?
     		// base[m] = ONEMASK - LOG_TABLE[idx as usize];
-            base[m] = ONEMASK - idx.to_multiplier().0;
+            base[m] = F::ONEMASK - idx.to_multiplier().0;
 
     		// Compute base[i] = base[i] * EXP[b % ONEMASK]
     		// where b = base[m] + LOG[base[i] ^ 1_u16].
     		// As ONEMASK is the order of the multiplicative grou,
     		// base[i] = base[i] * EXP[base[m]] * (base[i] ^ 1)
     		// TODO: But why?
-    		for i in (m + 1)..(FIELD_BITS - 1) {
+    		for i in (m + 1)..(F::FIELD_BITS - 1) {
     			// WTF?!?
     			// let b = LOG_TABLE[(base[i] as u16 ^ 1_u16) as usize] as u32 + base[m] as u32;
-    			let b = Additive(base[i] ^ 1).to_multiplier().to_wide() + (base[m] as Wide);
-    			let b = b % (ONEMASK as Wide);
+    			let b = Additive(base[i] ^ 1).to_multiplier().to_wide() + (base[m].into());
+    			let b = b % (F::ONEMASK_WIDE);
     			// base[i] = mul_table(base[i], b as u16);
-    			base[i] = Additive(base[i]).mul(Logarithm(b as Elt)).0;
+    			base[i] = Additive(base[i]).mul(Logarithm(b.truncate())).0;
     		}
     	}
 
     	// Convert skew factors from Additive to Logarithm form
-        let mut skews_multiplier = [Logarithm(0); ONEMASK as usize];
-    	for i in 0..(ONEMASK as usize) {
+        let mut skews_multiplier = [Logarithm(0); F::ONEMASK as usize];
+    	for i in 0..(F::ONEMASK as usize) {
     		// SKEW_FACTOR[i] = LOG_TABLE[SKEW_FACTOR[i] as usize];
     		skews_multiplier[i] = skews_additive[i].to_multiplier();
     	}
 
-        let mut B = [Logarithm(0); FIELD_SIZE >> 1];
+        let mut B = [Logarithm(0); F::FIELD_SIZE >> 1];
 
     	// TODO: How does this alter base?
-    	base[0] = ONEMASK - base[0];
-    	for i in 1..(FIELD_BITS - 1) {
+    	base[0] = F::ONEMASK - base[0];
+    	for i in 1..(F::FIELD_BITS - 1) {
     		base[i] = ( (
-                (ONEMASK as Wide) - (base[i] as Wide) + (base[i - 1] as Wide)
-            ) % (ONEMASK as Wide) ) as Elt;
+                (F::ONEMASK_WIDE) - (base[i].into()) + (base[i - 1].into())
+            ) % (F::ONEMASK_WIDE) ).truncate();
     	}
 
     	// TODO: What is B anyways?
     	B[0] = Logarithm(0);
-    	for i in 0..(FIELD_BITS - 1) {
+    	for i in 0..(F::FIELD_BITS - 1) {
     		let depart = 1 << i;
     		for j in 0..depart {
     			B[j + depart] = Logarithm( ((
-                    B[j].to_wide() + (base[i] as Wide)
-                ) % (ONEMASK as Wide)) as Elt);
+                    B[j].to_wide() + (base[i].into())
+                ) % (F::ONEMASK_WIDE)).truncate());
     		}
     	}
 
@@ -191,7 +190,7 @@ impl AfftTables {
 fn flt_back_and_forth() {
     use rand::prelude::*;
     let mut rng = thread_rng();
-    let uni = rand::distributions::Uniform::<Elt>::new_inclusive(0, ONEMASK);
+    let uni = rand::distributions::Uniform::<Elt>::new_inclusive(0, F::ONEMASK);
 
     const N: usize = 128;
     for (k,n) in &[(N/4,N)] {

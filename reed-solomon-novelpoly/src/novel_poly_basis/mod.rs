@@ -12,8 +12,8 @@ use std::convert::TryInto;
 
 use crate::errors::*;
 use crate::{Shard};
-use crate::field::afft::*;
-use crate::field::FieldAdd;
+use crate::field::{FieldAdd, TruncateTo, Logarithm, Additive, walsh, AfftField, tweaked_formal_derivative};
+use crate::field::macros;
 
 //use crate::shard::ShardHold;
 pub use super::util::*;
@@ -23,7 +23,10 @@ pub use super::util::*;
 /// let r: ReedSolomon<Field> = ReedSolomon::new(3, 2).unwrap();
 ///
 #[derive(Debug)]
-pub struct ReedSolomon<F: AfftField> {
+pub struct ReedSolomon<F: AfftField> where
+   <F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug,
+    [(); F::FIELD_BYTES]: Sized,
+{
     /// Avoid copying unnecessary chunks.
     wanted_n: usize,
     /// total number of message symbols to send
@@ -38,6 +41,8 @@ pub struct ReedSolomon<F: AfftField> {
 impl<F: AfftField> ReedSolomon<F>
 where
     [u8; F::FIELD_BYTES]: Sized,
+[(); F::FIELD_BYTES]: Sized,
+<F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug
 {
     /// Returns the total number of data shard
     /// consumed by the code. That is equal the total number of symbols
@@ -245,8 +250,8 @@ where
         }
 
         //Evaluate error locator polynomial only once
-        let mut error_poly_in_log = [F::Logarithm(0); F::FIELD_SIZE];
-        let mut error_poly_in_log = vec![Logarithm(0); F::FIELD_SIZE];
+        let mut error_poly_in_log = [Logarithm::<F>(0); F::FIELD_SIZE];
+        let mut error_poly_in_log = vec![Logarithm::<F>(0); F::FIELD_SIZE];
         self.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
 
         let mut acc = Vec::<u8>::with_capacity(shard_len_in_syms * 2 * self.k);
@@ -259,7 +264,7 @@ where
                         //let z = x.get_chunk(i);
                         let z = AsRef::<[[u8; <F as FieldAdd>::FIELD_BYTES]]>::as_ref(&x)[i];
                         //let z1 : [u8; Additive::FIELD_BYTES] = [z[0], z[1]];                        
-                        Additive::from_be_bytes(z[..].try_into().expect("F::FIELD_BYTES and FieldAdd>::FIELD_BYTES are the same. q.e.d"))
+                        Additive::<F>::from_be_bytes(z[..].try_into().expect("F::FIELD_BYTES and FieldAdd>::FIELD_BYTES are the same. q.e.d"))
                     })
                 })
                 .collect::<Vec<Option<Additive>>>();
@@ -281,7 +286,7 @@ where
     }
 
     /// Encoding alg for k/n < 0.5: message is a power of two
-    pub fn encode_low(&self, data: &[Additive], codeword: &mut [Additive]) {
+    pub fn encode_low(&self, data: &[Additive<F>], codeword: &mut [Additive<F>]) {
         assert!(self.k + self.k <= self.n);
         assert_eq!(codeword.len(), self.n);
         assert_eq!(data.len(), self.n);
@@ -298,7 +303,7 @@ where
         // split after the first k
         let (codeword_first_k, codeword_skip_first_k) = codeword.split_at_mut(self.k);
 
-        inverse_afft(codeword_first_k, self.k, 0);
+        F::inverse_afft(codeword_first_k, self.k, 0);
 
         // the first codeword is now the basis for the remaining transforms
         // denoted `M_topdash`
@@ -307,7 +312,7 @@ where
             let codeword_at_shift = &mut codeword_skip_first_k[(shift - self.k)..shift];
             // copy `M_topdash` to the position we are currently at, the n transform
             codeword_at_shift.copy_from_slice(codeword_first_k);
-            afft(codeword_at_shift, self.k, shift);
+            F::afft(codeword_at_shift, self.k, shift);
         }
 
         // restore `M` from the derived ones
@@ -318,7 +323,7 @@ where
 
     //data: message array. parity: parity array. mem: buffer(size>= n-k)
     //Encoding alg for k/n>0.5: parity is a power of two.
-    pub fn encode_high(&self, data: &[Additive], parity: &mut [Additive], mem: &mut [Additive]) {
+    pub fn encode_high(&self, data: &[Additive<F>], parity: &mut [Additive<F>], mem: &mut [Additive<F>]) {
         let t: usize = self.n - self.k;
 
         // mem_zero(&mut parity[0..t]);
@@ -330,17 +335,17 @@ where
         while i < self.n {
             (&mut mem[..t]).copy_from_slice(&data[(i - t)..t]);
 
-            inverse_afft(mem, t, i);
+            F::inverse_afft(mem, t, i);
             for j in 0..t {
                 parity[j] ^= mem[j];
             }
             i += t;
         }
-        afft(parity, t, 0);
+        F::afft(parity, t, 0);
     }
 
     /// Bytes shall only contain payload data
-    pub fn encode_sub(&self, bytes: &[u8]) -> Result<Vec<Additive>> {
+    pub fn encode_sub(&self, bytes: &[u8]) -> Result<Vec<Additive<F>>> {
         assert!(is_power_of_2(self.n), "Algorithm only works for 2^i sizes for N");
         assert!(is_power_of_2(self.k), "Algorithm only works for 2^i sizes for K");
         assert!(bytes.len() <= self.k << 1);
@@ -365,14 +370,14 @@ where
         // pad the incoming bytes with trailing 0s
         // so we get a buffer of size `N` in `GF` symbols
         let zero_bytes_to_add = self.n * 2 - dl;
-        let data: Vec<Additive> = bytes
+        let data: Vec<Additive<F>> = bytes
             .into_iter()
             .copied()
             .chain(std::iter::repeat(0u8).take(zero_bytes_to_add))
             .tuple_windows()
             .step_by(2)
-            .map(|(a, b)| Additive(Elt::from_be_bytes([a, b])))
-            .collect::<Vec<Additive>>();
+            .map(|(a, b)| Additive::<F>(F::from_be_bytes_to_element([a, b])))
+            .collect::<Vec<Additive<F>>>();
 
         println!("data before being encoded {:?}", data);
 
@@ -391,17 +396,17 @@ where
 
     pub fn reconstruct_sub(
         &self,
-        codewords: &[Option<Additive>],
+        codewords: &[Option<Additive<F>>],
         erasures: &[bool],
-        error_poly: &[Logarithm],
-        //error_poly: &[Logarithm; F::FIELD_SIZE],
+        error_poly: &[Logarithm<F>],
+        //error_poly: &[Logarithm<F>; F::FIELD_SIZE],
     ) -> Result<Vec<u8>> {
         assert!(is_power_of_2(self.n), "Algorithm only works for 2^i sizes for N");
         assert!(is_power_of_2(self.k), "Algorithm only works for 2^i sizes for K");
         assert_eq!(codewords.len(), self.n);
         assert!(self.k <= self.n / 2);
         // The recovered _payload_ chunks AND parity chunks
-        let mut recovered = vec![Additive(0); self.k];
+        let mut recovered = vec![Additive::<F>(F::ZERO_ELEMENT); self.k];
 
         // get rid of all `None`s
         let mut codeword = codewords
@@ -412,7 +417,7 @@ where
                 if let Some(sym) = sym {
                     (idx, *sym)
                 } else {
-                    (idx, Additive(0))
+                    (idx, Additive::<F>(F::ZERO_ELEMENT))
                 }
             })
             .map(|(idx, codeword)| {
@@ -421,7 +426,7 @@ where
                 }
                 codeword
             })
-            .collect::<Vec<Additive>>();
+            .collect::<Vec<Additive<F>>>();
 
         // filled up the remaining spots with 0s
         assert_eq!(codeword.len(), self.n);
@@ -447,23 +452,23 @@ where
     // technically we only need to recover
     // the first `k` instead of all `n` which
     // would include parity chunks.
-    pub(crate) fn decode_main(&self, codeword: &mut [Additive], erasure: &[bool], log_walsh2: &[Logarithm]) {
+    pub(crate) fn decode_main(&self, codeword: &mut [Additive<F>], erasure: &[bool], log_walsh2: &[Logarithm<F>]) {
         assert_eq!(codeword.len(), self.n);
         assert!(self.n >= self.k);
         assert_eq!(erasure.len(), self.n);
 
         for i in 0..self.n {
-            codeword[i] = if erasure[i] { Additive(0) } else { codeword[i].mul(log_walsh2[i]) };
+            codeword[i] = if erasure[i] { Additive::<F>(F::ZERO_ELEMENT) } else { codeword[i].mul(log_walsh2[i]) };
         }
 
-        inverse_afft(codeword, self.n, 0);
+        F::inverse_afft(codeword, self.n, 0);
 
         tweaked_formal_derivative(codeword, self.n);
 
-        afft(codeword, self.n, 0);
+        F::afft(codeword, self.n, 0);
 
         for i in 0..self.k {
-            codeword[i] = if erasure[i] { codeword[i].mul(log_walsh2[i]) } else { Additive(0) };
+            codeword[i] = if erasure[i] { codeword[i].mul(log_walsh2[i]) } else { Additive::<F>(F::ZERO_ELEMENT) };
         }
     }
 
@@ -472,24 +477,24 @@ where
     // since this has only to be called once per reconstruction
     //TODO to check: This function was accepeting a parameter n but it was sent as FIELD_SIZE.
     // that looks like an unharmful bug
-    pub fn eval_error_polynomial(&self, erasure: &[bool], log_walsh2: &mut [Logarithm]) {
+    pub fn eval_error_polynomial(&self, erasure: &[bool], log_walsh2: &mut [Logarithm<F>]) {
         let n = F::FIELD_SIZE;
         let z = std::cmp::min(n, erasure.len());
         for i in 0..z {
-            log_walsh2[i] = Logarithm(erasure[i] as Elt);
+            log_walsh2[i] = Logarithm::<F>(erasure[i].into());
         }
         for i in z..n {
-            log_walsh2[i] = Logarithm(0);
+            log_walsh2[i] = Logarithm::<F>(F::ZERO_ELEMENT);
         }
         walsh(log_walsh2, F::FIELD_SIZE);
         for i in 0..n {
-            let tmp = log_walsh2[i].to_wide() * LOG_WALSH[i].to_wide();
-            log_walsh2[i] = Logarithm((tmp % ONEMASK as Wide) as Elt);
+            let tmp = log_walsh2[i].to_wide() * F::LOG_WALSH[i].to_wide();
+            log_walsh2[i] = Logarithm::<F>((tmp % F::ONEMASK_WIDE).truncate());
         }
         walsh(log_walsh2, F::FIELD_SIZE);
         for i in 0..z {
             if erasure[i] {
-                log_walsh2[i] = Logarithm(ONEMASK) - log_walsh2[i];
+                log_walsh2[i] = Logarithm::<F>(F::ONEMASK) - log_walsh2[i];
             }
         }
     }

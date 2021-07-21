@@ -8,7 +8,7 @@ use core::convert::{TryFrom,TryInto, Into};
 use super::gf_mul_bitpoly_reduced;
 
 /// Additive finite field representation
-pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self> + Eq where
+pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self> + Eq  where
 {    
     const FIELD_BITS: usize;
     const FIELD_BYTES: usize = Self::FIELD_BITS / 8;
@@ -93,11 +93,11 @@ pub struct Additive<F: FieldAdd> (pub F::Element);
 
 impl <F: FieldAdd> BitXor for  Additive<F> {
     type Output = Self;
-    fn bitxor(self, _: Self) -> <Self as BitXor<Self>>::Output { todo!() }
+    fn bitxor(self, rhs: Self) -> <Self as BitXor<Self>>::Output { Additive::<F>(self.0 ^ rhs.0)  }
 }
 
 impl <F: FieldAdd> BitXorAssign for  Additive<F> {
-    fn bitxor_assign(&mut self, _: Self) { todo!() }
+    fn bitxor_assign(&mut self, rhs: Self) { self.0 ^= rhs.0; }
 }
 
 impl<F: FieldAdd> Additive<F> where

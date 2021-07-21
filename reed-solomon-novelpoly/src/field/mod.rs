@@ -8,10 +8,12 @@ use crate::util::*;
 #[macro_use]
 pub mod macros;
 mod traits;
-mod afft_field;
+mod field_util;
 mod afft_util;
+mod afft_field;
 
-pub use traits::{FieldAdd, FieldMul, TruncateTo, Logarithm, walsh, Additive};
+pub use traits::{FieldAdd, FieldMul, TruncateTo, Logarithm, Additive};
+pub use field_util::{walsh, gf_mul_bitpoly_reduced};
 pub use afft_util::{tweaked_formal_derivative};
 pub use afft_field::{AfftField};
 

@@ -1,4 +1,5 @@
 use super::{FieldAdd, FieldMul, Logarithm, Additive};
+use core::convert::{TryFrom,TryInto, Into};
 
 use static_init::{dynamic};
 
@@ -68,4 +69,5 @@ pub fn formal_derivative<F: FieldAdd>(cos: &mut [Additive<F>], size: usize) {
         i <<= 1;
     }
 }
+
 

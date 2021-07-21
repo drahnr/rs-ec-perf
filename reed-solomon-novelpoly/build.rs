@@ -9,14 +9,14 @@ use std::io;
 include!("src/util.rs");
 include!("src/field/traits.rs");
 include!("src/field/macros.rs");
+include!("src/field/field_util.rs");
+include!("gen_field_tables.rs");
 
 mod f2e16 {
-    include!("inc_gen_field_tables.rs");
     include!("src/field/f2e16.rs");
 }
 
 mod f256 {
-    include!("inc_gen_field_tables.rs");
     include!("src/field/f256.rs");
 }
 
@@ -45,9 +45,9 @@ fn gen_ffi_novel_poly_basis_bindgen() {
     bindings.write_to_file(out_path.join("bindings.rs")).expect("Couldn't write bindings!");
 }
 
-fn main() -> io::Result<()> {
-    f2e16::gen_field_tables::<f2e16::F2e16>()?;
-    f256::gen_field_tables::<f256::F256>()?;
+fn main() -> io::Result<()> {    
+    gen_field_tables::<f2e16::F2e16>()?;
+    gen_field_tables::<f256::F256>()?;
     // to avoid a circular loop, we need to import a dummy
     // table, such that we do not depend on the thing we are
     // about to spawn

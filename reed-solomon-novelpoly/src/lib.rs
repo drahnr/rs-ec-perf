@@ -14,7 +14,7 @@ pub use util::*;
 pub mod field;
 pub use self::field::f256;
 pub use self::field::f2e16;
-pub use self::field::{FieldAdd, FieldMul, TruncateTo, Logarithm, walsh, Additive, AfftField};
+pub use self::field::{FieldAdd, FieldMul, TruncateTo, Logarithm, Additive, AfftField, walsh, gf_mul_bitpoly_reduced};
 
 #[macro_use]
 pub use self::field::macros;

@@ -1,8 +1,12 @@
 /// Declare field and include its tables
 ///
 /// Requires Elt and Wide be defined previosuly.
+
 macro_rules! decl_field_additive {
  	($name: tt, bits = $fbits:literal, generator = $generator: literal, elt = $elt:tt, wide = $wide:tt, cantor_base_final_elt = $cantor_base_final_elt: literal) => {
+
+        #[cfg(table_bootstrap_complete)]
+        include!(concat!(env!("OUT_DIR"), "/table_", stringify!($name), ".rs"));
 
         #[derive(Clone, Copy,Debug, Default, PartialEq, Eq)]
         pub struct $name;
@@ -39,20 +43,33 @@ macro_rules! decl_field_additive {
                 element.to_be_bytes()
             }
 
-            //#[cfg(table_bootstrap_complete)]
- 		    //include!(concat!(env!("OUT_DIR"), "/table_", stringify!($name), ".rs"));
-
-            //#[cfg(not(table_bootstrap_complete))]
+            #[cfg(table_bootstrap_complete)]
+            const BASE: [Self::Element; Self::FIELD_BITS] = BASE;
+            #[cfg(not(table_bootstrap_complete))]            
             const BASE: [Self::Element; Self::FIELD_BITS] = [Self::ZERO_ELEMENT; Self::FIELD_BITS];
-            //#[cfg(not(table_bootstrap_complete))]
+
+            #[cfg(table_bootstrap_complete)]
+            const LOG_TABLE: [Self::Element; Self::FIELD_SIZE] = LOG_TABLE;
+            #[cfg(not(table_bootstrap_complete))]            
             const LOG_TABLE: [Self::Element; Self::FIELD_SIZE] = [Self::ZERO_ELEMENT; Self::FIELD_SIZE];
-            //#[cfg(not(table_bootstrap_complete))]
+
+            #[cfg(table_bootstrap_complete)]
+            const EXP_TABLE: [Self::Element; Self::FIELD_SIZE] = EXP_TABLE;
+            #[cfg(not(table_bootstrap_complete))]            
             const EXP_TABLE: [Self::Element; Self::FIELD_SIZE] = [Self::ZERO_ELEMENT; Self::FIELD_SIZE];
-            //#[cfg(not(table_bootstrap_complete))]
+
+            #[cfg(table_bootstrap_complete)]
+            const LOG_WALSH: [Logarithm::<Self>; Self::FIELD_SIZE] = LOG_WALSH;
+            #[cfg(not(table_bootstrap_complete))]            
             const LOG_WALSH: [Logarithm::<Self>; Self::FIELD_SIZE] = [Logarithm(Self::ZERO_ELEMENT); Self::FIELD_SIZE];          
-            //#[cfg(not(table_bootstrap_complete))]
+
+            #[cfg(table_bootstrap_complete)]
+            const AFFT_SKEW_TABLE: [Logarithm<Self>; Self::ONEMASK_USIZE] = AFFT_SKEW_TABLE;
+            #[cfg(not(table_bootstrap_complete))]
             /// Logarithm form of twisted factors used in our additive FFT
             const AFFT_SKEW_TABLE: [Logarithm<Self>; Self::ONEMASK_USIZE] = [Logarithm(Self::ZERO_ELEMENT); Self::ONEMASK_USIZE] ;
+            
+            
         }
 
 

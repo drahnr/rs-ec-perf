@@ -14,6 +14,8 @@ pub use util::*;
 pub mod field;
 pub use self::field::f256;
 pub use self::field::f2e16;
+pub use self::field::f256::F256;
+pub use self::field::f2e16::F2e16;
 pub use self::field::{FieldAdd, FieldMul, TruncateTo, Logarithm, Additive, AfftField, walsh, gf_mul_bitpoly_reduced};
 
 #[macro_use]
@@ -21,6 +23,7 @@ pub use self::field::macros;
 
 mod novel_poly_basis;
 pub use self::novel_poly_basis::*;
+pub use self::novel_poly_basis::availability_util::*;
 
 pub mod shard;
 pub use self::shard::{Shard};
@@ -34,21 +37,29 @@ pub mod cxx;
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::convert::TryInto;
     use reed_solomon_tester::{roundtrip, BYTES, N_SHARDS};
 
     #[cfg(feature = "naive")]
-    #[test]
-    fn status_quo_roundtrip() -> Result<()> {
-        roundtrip(status_quo::encode::<WrappedShard>, status_quo::reconstruct::<WrappedShard>, &BYTES[..1337], N_SHARDS)
+    fn status_quo_roundtrip<F: FieldAdd>() -> Result<()> {
+        roundtrip(status_quo::encode::<F, WrappedShard>, status_quo::reconstruct::<F, WrappedShard>, &BYTES[..1337], N_SHARDS)
     }
 
-    #[test]
-    fn novel_poly_basis_roundtrip() -> Result<()> {
+    fn novel_poly_basis_roundtrip<F: AfftField>() -> Result<()>
+        where
+     [u8; F::FIELD_BYTES]: Sized,
+    [(); F::FIELD_BYTES]: Sized,
+    [(); F::ONEMASK_USIZE]: Sized,
+    [(); F::FIELD_SIZE >> 1]: Sized,
+    <F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug
+    {
         roundtrip(
-            novel_poly_basis::encode::<WrappedShard>,
-            novel_poly_basis::reconstruct::<WrappedShard>,
+            novel_poly_basis::encode::<F, WrappedShard>,
+            novel_poly_basis::reconstruct::<F, WrappedShard>,
             &BYTES[..1337],
             N_SHARDS,
         )
     }
+    test_all_fields_for!(novel_poly_basis_roundtrip);
+    
 }

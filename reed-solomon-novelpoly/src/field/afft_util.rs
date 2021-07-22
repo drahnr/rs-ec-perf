@@ -32,25 +32,28 @@ pub fn tweaked_formal_derivative<F: FieldAdd>(codeword: &mut [Additive<F>], n: u
 // TODO: This is wrong right now, use negation!!
 #[cfg(not(b_is_not_one))]
 #[allow(non_snake_case)]
-#[test]
-fn b_is_one() {
-    let B = unsafe { &AFFT_TABLES.B };
-    fn test_b(b: Logarithm) {
-        for x in 0..FIELD_SIZE {
-            let x = Additive(x as Elt);
-        	assert_eq!(x, x.mul(b));
-        }
-    }
-    let mut old_b = None;
-	for i in (0..FIELD_SIZE).into_iter().step_by(256) {
-        let b = B[i >> 1];
-        if old_b != Some(b) {
-            test_b( Logarithm(ONEMASK) - b );
-            test_b( b );
-            old_b = Some(b);
-        }
-    }
-}
+// TODO: Provide B again and activate test
+////////////////////////////////////////////////////////////////
+// #[test]                                                    //
+// fn b_is_one() {                                            //
+//     let B = unsafe { &AFFT_TABLES.B };                     //
+//     fn test_b(b: Logarithm) {                              //
+//         for x in 0..FIELD_SIZE {                           //
+//             let x = Additive(x as Elt);                    //
+//         	assert_eq!(x, x.mul(b));                          //
+//         }                                                  //
+//     }                                                      //
+//     let mut old_b = None;                                  //
+// 	for i in (0..FIELD_SIZE).into_iter().step_by(256) {       //
+//         let b = B[i >> 1];                                 //
+//         if old_b != Some(b) {                              //
+//             test_b( Logarithm(ONEMASK) - b );              //
+//             test_b( b );                                   //
+//             old_b = Some(b);                               //
+//         }                                                  //
+//     }                                                      //
+// }                                                          //
+////////////////////////////////////////////////////////////////
 
 
 /// Formal derivative of polynomial in the new?? basis

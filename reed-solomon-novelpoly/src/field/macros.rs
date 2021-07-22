@@ -1,6 +1,8 @@
 /// Declare field and include its tables
 ///
 /// Requires Elt and Wide be defined previosuly.
+#[cfg(table_bootstrap_complete)]
+use paste::paste;
 
 macro_rules! decl_field_additive {
  	($name: tt, bits = $fbits:literal, generator = $generator: literal, elt = $elt:tt, wide = $wide:tt, cantor_base_final_elt = $cantor_base_final_elt: literal) => {
@@ -10,7 +12,7 @@ macro_rules! decl_field_additive {
 
         #[derive(Clone, Copy,Debug, Default, PartialEq, Eq)]
         pub struct $name;
-        impl FieldAdd for $name
+        impl FieldAdd for $name where
         {
             type Element = $elt;
             type Wide = $wide;
@@ -67,8 +69,7 @@ macro_rules! decl_field_additive {
             const AFFT_SKEW_TABLE: [Logarithm<Self>; Self::ONEMASK_USIZE] = AFFT_SKEW_TABLE;
             #[cfg(not(table_bootstrap_complete))]
             /// Logarithm form of twisted factors used in our additive FFT
-            const AFFT_SKEW_TABLE: [Logarithm<Self>; Self::ONEMASK_USIZE] = [Logarithm(Self::ZERO_ELEMENT); Self::ONEMASK_USIZE] ;
-            
+            const AFFT_SKEW_TABLE: [Logarithm<Self>; Self::ONEMASK_USIZE] = [Logarithm(Self::ZERO_ELEMENT); Self::ONEMASK_USIZE] ;            
             
         }
 
@@ -77,3 +78,23 @@ macro_rules! decl_field_additive {
 
         
  } // macro_rules! decl_field_additive
+
+#[cfg(test)]
+#[macro_export]
+macro_rules! test_all_fields_for {
+        // Arguments are module name and function name of function to test bench
+        ($fn_name:ident) => {
+            // The macro will expand into the contents of this block.
+            paste::item! {
+                #[test]
+                fn [< test_ $fn_name F256>] () {
+                    $fn_name::<F256>();
+                }
+
+                #[test]
+                fn [< test_ $fn_name F2e16>] () {
+                    $fn_name::<F2e16>();
+                }
+            }
+        };
+ }//macro_rules! tess_all_fields_for

@@ -1,8 +1,15 @@
 #[cfg(table_bootstrap_complete)]
 use super::*;
+use core::convert::{TryInto};
 use crate::{FieldAdd, TruncateTo, Logarithm, walsh};
 
 decl_field_additive!(F256, bits = 8, generator = 0x1D, elt = u8, wide = u16, cantor_base_final_elt = 230);
+
+#[cfg(table_bootstrap_complete)]
+use crate::AfftField;
+#[cfg(table_bootstrap_complete)]
+impl AfftField for F256 {}
+
 //    const AFFT_TABLES: AfftTables<F> = AfftTables::<F>::initialize();
 
 // Valid Cantor basis, but fails embedded_gf16

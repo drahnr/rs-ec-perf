@@ -17,6 +17,9 @@ use crate::{Shard};
 use crate::field::{FieldAdd, FieldMul, TruncateTo, Logarithm, Additive, walsh, AfftField, tweaked_formal_derivative};
 use crate::field::macros;
 
+pub mod availability_util;
+pub use availability_util::*;
+
 //use crate::shard::ShardHold;
 pub use super::util::*;
 /// Reed-Solomon erasure code encoder/decoder.

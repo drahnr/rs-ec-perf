@@ -152,30 +152,45 @@ pub trait AfftField : FieldAdd where [(); Self::FIELD_BYTES]: Sized,
     }
     
 }
+use crate::f256::{F256};
+use crate::f2e16::F2e16;
 
+#[cfg(test)]
+mod tests {
 
-#[test]
-fn flt_back_and_forth() {
+    use super::*;
+fn flt_back_and_forth<F: AfftField>()
+where
+[u8; F::FIELD_BYTES]: Sized,
+[(); F::FIELD_BYTES]: Sized,
+[(); F::ONEMASK_USIZE]: Sized,
+[(); F::FIELD_SIZE >> 1]: Sized,
+<F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug
+{
     use rand::prelude::*;
     let mut rng = thread_rng();
-    let uni = rand::distributions::Uniform::<Elt>::new_inclusive(0, F::ONEMASK);
+    let uni = rand::distributions::Uniform::<F::Element>::new_inclusive(0, F::ONEMASK_USIZE);
 
     const N: usize = 128;
     for (k,n) in &[(N/4,N)] {
         let mut data = (0..*n).into_iter().map( |_| Additive(uni.sample(&mut rng)) ).collect::<Vec<Additive>>();
         let expected = data.clone();
 
-        afft(&mut data, *n, *k);
+        F::afft(&mut data, *n, *k);
 
         // make sure something is done
         assert!(data.iter().zip(expected.iter()).filter(|(a, b)| { a != b }).count() > 0);
 
         
-        inverse_afft(&mut data, *n, *k);
+        F::inverse_afft(&mut data, *n, *k);
 
         assert_eq!(data, expected);
     }
 }
+
+
+test_all_fields_for!(flt_back_and_forth);
+
 
 // We want the low rate scheme given in
 // https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
@@ -186,3 +201,4 @@ fn flt_back_and_forth() {
 // We're hunting for the differences and trying to undersrtand the algorithm.
 
 
+}

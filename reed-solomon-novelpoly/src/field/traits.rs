@@ -8,7 +8,7 @@ use core::convert::{TryFrom,TryInto, Into};
 use super::gf_mul_bitpoly_reduced;
 
 /// Additive finite field representation
-pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self> + Eq  where
+pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self> + Eq  
 {    
     const FIELD_BITS: usize;
     const FIELD_BYTES: usize = Self::FIELD_BITS / 8;
@@ -224,6 +224,7 @@ impl <F: FieldAdd> Mul<Logarithm<F>> for Additive<F>
 		if self == Self::zero() {
 			return Self::zero();
 		}
+        //TODO: Why don't we check for self.to_multiplier().0 + other.0 being too big
          Additive::<F>(F::EXP_TABLE[(self.to_multiplier().0 + other.0).into()])
     }
 

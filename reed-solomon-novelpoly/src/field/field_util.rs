@@ -52,9 +52,9 @@ pub fn gf_mul_bitpoly_reduced<F: FieldAdd>(a: F::Element, b: F::Element) -> F::E
     r.try_into().unwrap()
 }
 
-#[test]
-fn is_cantor_basis() {
-    for w in BASE.windows(2) {
+#[cfg(test)]        
+fn is_cantor_basis<F: FieldAdd>() {
+    for w in F::BASE.windows(2) {
         let b = w[1];
         let square = gf_mul_bitpoly_reduced(b,b);
         let a = w[0];
@@ -63,3 +63,6 @@ fn is_cantor_basis() {
         assert_eq!(a, square ^ b);
     }
 }
+
+#[cfg(test)]        
+test_all_fields_for!(is_cantor_basis);

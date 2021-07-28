@@ -1,4 +1,5 @@
 use super::*;
+use std::iter;
 
 #[macro_use]
 use crate::{test_all_fields_for};
@@ -120,7 +121,7 @@ where
 // }
 
 // for shards of length 1
-fn wrapped_shard_len1_as_gf_sym<F: FieldAdd>(w: &WrappedShard) -> Additive<F> {
+fn wrapped_shard_len1_as_gf_sym<F: FieldAdd>(w: &WrappedShard<F>) -> Additive<F> {
     let val = AsRef::<[[u8; 2]]>::as_ref(w)[0];
     Additive(u16::from_be_bytes(val))
 }
@@ -430,3 +431,27 @@ fn shard_len_is_reasonable<F: FieldAdd>() {
     assert_eq!(rs.shard_len(19), 6);
 }
 test_all_fields_for!(shard_len_is_reasonable);
+
+// pub fn roundtrip<'s, Enc, Recon, E, S, F>(
+//  	encode: Enc,
+//  	reconstruct: Recon,
+//  	payload: &'s [u8],
+//  	target_shard_count: usize,
+//  ) -> Result<()>
+//  where
+//  	Enc: Fn(&'s [u8], usize) -> Result<Vec<S>>,
+//  	Recon: Fn(Vec<Option<S>>, usize) -> Result<Vec<u8>>,
+//      F: FieldAdd,
+//      [(); F::FIELD_BYTES]: Sized,
+//     S: Clone + AsRef<[u8]> + AsMut<[[u8; F::FIELD_BYTES]]> + AsRef<[[u8; F::FIELD_BYTES]]> + iter::FromIterator<[u8; F::FIELD_BYTES]> + From<Vec<u8>>,
+//  {
+//  	// let v = roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E, F>(
+//  	// 	encode,
+//  	// 	reconstruct,
+//  	// 	payload,
+//  	// 	target_shard_count,
+//  	// 	drop_random_max,
+//  	// )?;
+//  	// Ok(v)
+//      Ok(vec!([]))
+//  }

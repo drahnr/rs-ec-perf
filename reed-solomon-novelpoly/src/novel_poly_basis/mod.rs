@@ -45,7 +45,6 @@ pub struct ReedSolomon<F: AfftField> where
 
 impl<F: AfftField> ReedSolomon<F>
 where
- [u8; F::FIELD_BYTES]: Sized,
 [(); F::FIELD_BYTES]: Sized,
 [(); F::ONEMASK_USIZE]: Sized,
 [(); F::FIELD_SIZE >> 1]: Sized,
@@ -528,3 +527,8 @@ where
 
 #[cfg(test)]
 mod tests;
+
+//#[cfg(test)]
+//pub use tests::roundtrip;
+
+

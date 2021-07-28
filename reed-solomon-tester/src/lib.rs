@@ -1,8 +1,13 @@
+#![feature(const_generics)]
+#![feature(const_evaluatable_checked)]
+
 use rand::prelude::*;
 use rand::seq::index::IndexVec;
 use std::error;
 use std::iter;
 use std::result;
+
+use reed_solomon_novelpoly::{Shard, FieldAdd};
 
 pub static SMALL_RNG_SEED: [u8; 32] = [
 	0, 6, 0xFA, 0, 0x37, 3, 19, 89, 32, 032, 0x37, 0x77, 77, 0b11, 112, 52, 12, 40, 82, 34, 0, 0, 0, 1, 4, 4, 1, 4, 99,
@@ -93,29 +98,31 @@ pub fn drop_random_max<T: Sized + Clone>(
 	iv
 }
 
-pub fn roundtrip<'s, Enc, Recon, S, E>(
-	encode: Enc,
-	reconstruct: Recon,
-	payload: &'s [u8],
-	target_shard_count: usize,
-) -> result::Result<(), E>
-where
-	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<S>, E>,
-	Recon: Fn(Vec<Option<S>>, usize) -> result::Result<Vec<u8>, E>,
-	E: error::Error + Send + Sync + 'static,
-	S: Clone + AsRef<[u8]> + AsMut<[[u8; 2]]> + AsRef<[[u8; 2]]> + iter::FromIterator<[u8; 2]> + From<Vec<u8>>,
-{
-	let v = roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E>(
-		encode,
-		reconstruct,
-		payload,
-		target_shard_count,
-		drop_random_max,
-	)?;
-	Ok(v)
-}
+pub fn roundtrip<'s, Enc, Recon, E, S, F>(
+ 	encode: Enc,
+ 	reconstruct: Recon,
+ 	payload: &'s [u8],
+ 	target_shard_count: usize,
+ ) -> result::Result<(), E>
+ where
+ 	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<S>, E>,
+ 	Recon: Fn(Vec<Option<S>>, usize) -> result::Result<Vec<u8>, E>,
+ 	E: error::Error + Send + Sync + 'static,
+     F: FieldAdd,
+     [(); F::FIELD_BYTES]: Sized,
+    S: Shard<F>,
+ {
+ 	let v = roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E, F>(
+ 		encode,
+ 		reconstruct,
+ 		payload,
+ 		target_shard_count,
+ 		drop_random_max,
+ 	)?;
+ 	Ok(v)
+ }
 
-pub fn roundtrip_w_drop_closure<'s, Enc, Recon, DropFun, RandGen, S, E>(
+pub fn roundtrip_w_drop_closure<'s, Enc, Recon, DropFun, RandGen, S, E, F>(
 	encode: Enc,
 	reconstruct: Recon,
 	payload: &'s [u8],
@@ -124,11 +131,13 @@ pub fn roundtrip_w_drop_closure<'s, Enc, Recon, DropFun, RandGen, S, E>(
 ) -> result::Result<(), E>
 where
 	E: error::Error + Send + Sync + 'static,
-	S: Clone + AsRef<[u8]> + AsMut<[[u8; 2]]> + AsRef<[[u8; 2]]> + iter::FromIterator<[u8; 2]> + From<Vec<u8>>,
+	S: Shard<F>,
 	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<S>, E>,
 	Recon: Fn(Vec<Option<S>>, usize) -> result::Result<Vec<u8>, E>,
 	DropFun: for<'z> FnMut(&'z mut [Option<S>], usize, usize, &mut RandGen) -> IndexVec,
 	RandGen: rand::Rng + rand::SeedableRng<Seed = [u8; 32]>,
+    F: FieldAdd,
+    [(); F::FIELD_BYTES]: Sized,
 {
 	let mut rng = <RandGen as rand::SeedableRng>::from_seed(SMALL_RNG_SEED);
 

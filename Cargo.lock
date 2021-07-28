@@ -940,6 +940,7 @@ dependencies = [
  "fs-err",
  "itertools 0.10.0",
  "rand",
+ "reed-solomon-novelpoly",
 ]
 
 [[package]]

@@ -1,4 +1,4 @@
-use std::convert::TryInto;
+use std::convert::{TryInto, TryFrom};
 
 use core::ops::Mul;
 use crate::{FieldAdd, Logarithm, Additive, TruncateTo, FieldMul};
@@ -158,47 +158,49 @@ use crate::f2e16::F2e16;
 #[cfg(test)]
 mod tests {
 
-    use super::*;
-fn flt_back_and_forth<F: AfftField>()
-where
-[u8; F::FIELD_BYTES]: Sized,
-[(); F::FIELD_BYTES]: Sized,
-[(); F::ONEMASK_USIZE]: Sized,
-[(); F::FIELD_SIZE >> 1]: Sized,
-<F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug
-{
-    use rand::prelude::*;
-    let mut rng = thread_rng();
-    let uni = rand::distributions::Uniform::<F::Element>::new_inclusive(0, F::ONEMASK_USIZE);
+   use super::*;
+    fn flt_back_and_forth<F: AfftField>()
+    where
+        [u8; F::FIELD_BYTES]: Sized,
+    [(); F::FIELD_BYTES]: Sized,
+    [(); F::ONEMASK_USIZE]: Sized,
+    [(); F::FIELD_SIZE >> 1]: Sized,
+    <F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug,
+    <F::Element as TryFrom<usize>>::Error : core::fmt::Debug
 
-    const N: usize = 128;
-    for (k,n) in &[(N/4,N)] {
-        let mut data = (0..*n).into_iter().map( |_| Additive(uni.sample(&mut rng)) ).collect::<Vec<Additive>>();
-        let expected = data.clone();
-
-        F::afft(&mut data, *n, *k);
-
-        // make sure something is done
-        assert!(data.iter().zip(expected.iter()).filter(|(a, b)| { a != b }).count() > 0);
-
+    {
+        use rand::prelude::*;
+        let mut rng = thread_rng();
+        let uni = rand::distributions::Uniform::<usize>::new_inclusive(0, F::ONEMASK_USIZE);
         
-        F::inverse_afft(&mut data, *n, *k);
-
-        assert_eq!(data, expected);
+        const N: usize = 128;
+        for (k,n) in &[(N/4,N)] {
+            let mut data = (0..*n).into_iter().map( |_| Additive::<F>(<F::Element as TryFrom::<usize>>::try_from(uni.sample(&mut rng)).unwrap()) ).collect::<Vec<Additive::<F>>>();
+            let expected = data.clone();
+            
+ F::afft(&mut data, *n, *k);
+            
+            // make sure something is done
+            assert!(data.iter().zip(expected.iter()).filter(|(a, b)| { a != b }).count() > 0);
+            
+            
+            F::inverse_afft(&mut data, *n, *k);
+            
+            assert_eq!(data, expected);
+        }
     }
-}
+    
+    
+    test_all_fields_for!(flt_back_and_forth);
 
 
-test_all_fields_for!(flt_back_and_forth);
-
-
-// We want the low rate scheme given in
-// https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
-// and https://github.com/catid/leopard/blob/master/docs/LowRateDecoder.pdf
-// but this code resembles https://github.com/catid/leopard which
-// implements the high rate decoder in
-// https://github.com/catid/leopard/blob/master/docs/HighRateDecoder.pdf
-// We're hunting for the differences and trying to undersrtand the algorithm.
+// // We want the low rate scheme given in
+// // https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
+// // and https://github.com/catid/leopard/blob/master/docs/LowRateDecoder.pdf
+// // but this code resembles https://github.com/catid/leopard which
+// // implements the high rate decoder in
+// // https://github.com/catid/leopard/blob/master/docs/HighRateDecoder.pdf
+// // We're hunting for the differences and trying to undersrtand the algorithm.
 
 
 }

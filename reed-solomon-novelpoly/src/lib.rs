@@ -1,4 +1,4 @@
-#![forbid(unused_crate_dependencies)]
+//#![forbid(unused_crate_dependencies)]
 #![feature(const_generics)]
 #![feature(const_evaluatable_checked)]
 #![feature(destructuring_assignment)]
@@ -38,13 +38,13 @@ pub mod cxx;
 mod test {
     use super::*;
     use std::convert::TryInto;
-    use reed_solomon_tester::{BYTES, N_SHARDS};
+    //use reed_solomon_tester::{BYTES, N_SHARDS};
     //use self::novel_poly_basis::roundtrip;
 
-    #[cfg(feature = "naive")]
-    fn status_quo_roundtrip<F: FieldAdd>() -> Result<()> {
-        roundtrip(status_quo::encode::<F, WrappedShard>, status_quo::reconstruct::<F, WrappedShard>, &BYTES[..1337], N_SHARDS)
-    }
+    // #[cfg(feature = "naive")]
+    // fn status_quo_roundtrip<F: FieldAdd>() -> Result<()> {
+    //     roundtrip(status_quo::encode::<F, WrappedShard>, status_quo::reconstruct::<F, WrappedShard>, &BYTES[..1337], N_SHARDS)
+    // }
 
     // fn novel_poly_basis_roundtrip<F: AfftField>() -> Result<()>
     //     where

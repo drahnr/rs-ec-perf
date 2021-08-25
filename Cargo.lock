@@ -927,7 +927,6 @@ dependencies = [
  "paste",
  "rand",
  "reed-solomon-erasure",
- "reed-solomon-tester",
  "static_init",
  "thiserror",
 ]

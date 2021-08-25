@@ -79,22 +79,22 @@ macro_rules! decl_field_additive {
         
  } // macro_rules! decl_field_additive
 
-#[cfg(test)]
-#[macro_export]
-macro_rules! test_all_fields_for {
-        // Arguments are module name and function name of function to test bench
-        ($fn_name:ident) => {
-            // The macro will expand into the contents of this block.
-            paste::item! {
-                #[test]
-                fn [< test_ $fn_name F256>] () {
-                    $fn_name::<F256>();
-                }
+// #[cfg(test)]
+// #[macro_export]
+// macro_rules! test_all_fields_for {
+//         // Arguments are module name and function name of function to test bench
+//         ($fn_name:ident) => {
+//             // The macro will expand into the contents of this block.
+//             paste::item! {
+//                 #[test]
+//                 fn [< test_ $fn_name F256>] () {
+//                     $fn_name::<F256>();
+//                 }
 
-                #[test]
-                fn [< test_ $fn_name F2e16>] () {
-                    $fn_name::<F2e16>();
-                }
-            }
-        };
- }//macro_rules! tess_all_fields_for
+//                 #[test]
+//                 fn [< test_ $fn_name F2e16>] () {
+//                     $fn_name::<F2e16>();
+//                 }
+//             }
+//         };
+//  }//macro_rules! tess_all_fields_for

@@ -2,6 +2,7 @@
 use super::*;
 use std::convert::{From, TryInto};
 use crate::{FieldAdd, TruncateTo, Logarithm, walsh, Additive};
+use core::ops::{Mul};
 
 decl_field_additive!(F2e16, bits = 16, generator = 0x2D, elt = u16, wide = u32, cantor_base_final_elt = 39198);
 
@@ -10,21 +11,28 @@ use crate::AfftField;
 #[cfg(table_bootstrap_complete)]
 impl AfftField for F2e16 {}
 
+
 // #[cfg(table_bootstrap_complete)]
 // include!("inc_afft.rs");
 
-// #[test]
-// fn embedded_gf256() {
-//     // We've a leaky to_multiplier abstraction that fucks up zero, so start at 1.
-//     let mask: F2e16::Element = !0xFF;
-//     for i in 1..=255 {
-//         let i = Additive(i as F2e16::Element).to_multiplier();
-//         for j in 0..256 {
-//             let j = Additive(j as F2e16::Element);
-//             assert!(j.mul(i).0 & mask == 0);
-//         }
-//     }
-// }
+#[test]
+fn embedded_gf256() {
+    // We've a leaky to_multiplier abstraction that fucks up zero, so start at 1.
+    //println!("{:?}", <F2e16 as FieldAdd>::LOG_TABLE);
+    let mask: <F2e16 as FieldAdd>::Element = !0xFF;
+     for i in 1..=255 {
+	#[cfg(table_bootstrap_complete)]
+	let test_log = LOG_TABLE[1];
+     	//let test_log = Logarithm::<F2e16>(i as <F2e16 as FieldAdd>::Element);
+     	let i_add = Additive::<F2e16>(i as <F2e16 as FieldAdd>::Element);
+	//let test_log = F2e16::LOG_TABLE[<F::Element as Into<usize>>::into(self.0)]
+          //let i = <Additive<F2e16> as FieldMul<F2e16, Logarithm<F2e16>>>::to_multiplier(i_add);
+    //      for j in 0..256 {
+    //          let j = Additive::<F2e16>(j as <F2e16 as FieldAdd>::Element);
+    // //         assert!(<Additive<F2e16> as Mul<Logarithm<F2e16>>>::mul(j,i).0 & mask == 0);
+    //      }
+    }
+}
 
 // #[test]
 // fn flt_roundtrip_small() {

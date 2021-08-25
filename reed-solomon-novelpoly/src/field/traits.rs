@@ -158,7 +158,7 @@ impl<F: FieldAdd> FieldMul<F, Logarithm<F>> for Additive<F>  where
 	/// Return multiplier prepared form
     #[inline(always)]
 	fn to_multiplier(self) -> Logarithm<F> {
-		Logarithm(F::LOG_TABLE[self.0.into()])
+		Logarithm(F::LOG_TABLE[<F::Element as Into<usize>>::into(self.0)])
 	}
 
 	/// Multiply field elements by a single multiplier, using SIMD if available

@@ -1,6 +1,6 @@
 use core::ops::{BitXor, BitXorAssign, Mul, MulAssign, Add, Shl, Shr, Index};
 use std::ops::{BitAnd, Sub};
-use derive_more::{Add, AddAssign, BitXor, BitXorAssign, Sub, SubAssign, BitAnd};
+use derive_more::{Add, AddAssign, BitXor, BitXorAssign, Sub, SubAssign, BitAnd, Display};
 use num::Integer;
 use core::convert::{TryFrom,TryInto, Into};
 
@@ -37,7 +37,6 @@ pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self>
     const ONEMASK: Self::Element; // should be  = (F::FIELD_SIZE - 1);
     const ONEMASK_USIZE: usize = Self::FIELD_SIZE - 1;
     
-
     const ZERO_ELEMENT_WIDE: Self::Wide;
     const ONE_ELEMENT_WIDE: Self::Wide;
     const ONEMASK_WIDE: Self::Wide; // should be  = (F::FIELD_SIZE - 1);
@@ -69,6 +68,12 @@ pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self>
     fn from_be_bytes_to_element(bytes: [u8; Self::FIELD_BYTES]) -> Self::Element;
     fn from_element_to_be_bytes(element: Self::Element) -> [u8; Self::FIELD_BYTES];
 
+    //because accessing log table carshes the compiler we are going to have this
+    //auxilary function 
+    fn get_log_table(index: usize) -> Self::Element;
+
+    fn get_exp_table(index: usize) -> Self::Element;
+
 }
 
 pub trait TruncateTo<F: FieldAdd> : From<F::Element> + TryInto<F::Element> + BitAnd<Output = Self>  {
@@ -88,8 +93,9 @@ impl<F: FieldAdd> TruncateTo<F> for F::Wide  {
 ///
 /// Additive via XOR form
 ///    
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)] // PartialOrd,Ord
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Display)] // PartialOrd,Ord
 pub struct Additive<F: FieldAdd> (pub F::Element);
+
 
 impl <F: FieldAdd> BitXor for  Additive<F> {
     type Output = Self;
@@ -158,7 +164,8 @@ impl<F: FieldAdd> FieldMul<F, Logarithm<F>> for Additive<F>  where
 	/// Return multiplier prepared form
     #[inline(always)]
 	fn to_multiplier(self) -> Logarithm<F> {
-		Logarithm(F::LOG_TABLE[<F::Element as Into<usize>>::into(self.0)])
+	    //Logarithm(F::LOG_TABLE[<F::Element as Into<usize>>::into(self.0)])
+	    Logarithm(F::get_log_table(<F::Element as Into<usize>>::into(self.0)))
 	}
 
 	/// Multiply field elements by a single multiplier, using SIMD if available
@@ -225,7 +232,8 @@ impl <F: FieldAdd> Mul<Logarithm<F>> for Additive<F>
 			return Self::zero();
 		}
         //TODO: Why don't we check for self.to_multiplier().0 + other.0 being too big
-         Additive::<F>(F::EXP_TABLE[(self.to_multiplier().0 + other.0).into()])
+	//TODO: F::FIELD_SIZE - 1 a constant
+         Additive::<F>(F::get_exp_table(<F::Element as Into<usize>>::into(self.to_multiplier().0) + <F::Element as Into<usize>>::into(other.0)))
     }
 
     #[cfg(not(table_bootstrap_complete))]

@@ -10,7 +10,7 @@ keywords = ["reed-solomon", "erasure", "encoding", "algorithm"]
 readme = "../README.md"
 
 [build-dependencies]
-derive_more = { version = "0.99.0", default-features = false, features = ["add_assign", "add"] }
+derive_more = { version = "0.99.0", default-features = false, features = ["add_assign", "add", "display"] }
 fs-err = "2.5.0"
 bindgen = { version = "0.57.0", optional = true }
 cc = { version = "1.0.67", features = ["parallel"], optional = true }

@@ -70,7 +70,25 @@ macro_rules! decl_field_additive {
             #[cfg(not(table_bootstrap_complete))]
             /// Logarithm form of twisted factors used in our additive FFT
             const AFFT_SKEW_TABLE: [Logarithm<Self>; Self::ONEMASK_USIZE] = [Logarithm(Self::ZERO_ELEMENT); Self::ONEMASK_USIZE] ;            
-            
+
+	    fn get_log_table(index: usize) -> Self::Element {
+		#[cfg(table_bootstrap_complete)]
+		return LOG_TABLE[index];
+			
+		#[cfg(not(table_bootstrap_complete))]
+		return Self::ZERO_ELEMENT;
+		
+	    }
+
+	    fn get_exp_table(index: usize) -> Self::Element {
+		#[cfg(table_bootstrap_complete)]
+		return EXP_TABLE[index  % (Self::FIELD_SIZE - 1)];
+			
+		#[cfg(not(table_bootstrap_complete))]
+		return Self::ZERO_ELEMENT;
+		
+	    }
+
         }
 
 

@@ -22,15 +22,12 @@ fn embedded_gf256() {
     let mask: <F2e16 as FieldAdd>::Element = !0xFF;
      for i in 1..=255 {
 	#[cfg(table_bootstrap_complete)]
-	let test_log = LOG_TABLE[1];
-     	//let test_log = Logarithm::<F2e16>(i as <F2e16 as FieldAdd>::Element);
-     	let i_add = Additive::<F2e16>(i as <F2e16 as FieldAdd>::Element);
-	//let test_log = F2e16::LOG_TABLE[<F::Element as Into<usize>>::into(self.0)]
-          //let i = <Additive<F2e16> as FieldMul<F2e16, Logarithm<F2e16>>>::to_multiplier(i_add);
-    //      for j in 0..256 {
-    //          let j = Additive::<F2e16>(j as <F2e16 as FieldAdd>::Element);
-    // //         assert!(<Additive<F2e16> as Mul<Logarithm<F2e16>>>::mul(j,i).0 & mask == 0);
-    //      }
+     	 let i = Additive::<F2e16>(i as <F2e16 as FieldAdd>::Element);
+         let log_i = <Additive<F2e16> as FieldMul<F2e16, Logarithm<F2e16>>>::to_multiplier(i);
+         for j in 0..256 {
+             let j = Additive::<F2e16>(j as <F2e16 as FieldAdd>::Element);
+             assert!(<Additive<F2e16> as Mul<Logarithm<F2e16>>>::mul(j,log_i).0 != 257);
+          }
     }
 }
 

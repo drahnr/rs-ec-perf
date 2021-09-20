@@ -31,25 +31,26 @@ fn embedded_gf256() {
     }
 }
 
-// #[test]
-// fn flt_roundtrip_small() {
-//     const N: usize = 16;
-//     const EXPECTED: [Additive<F2e16>; N] =
-//         unsafe { std::mem::transmute([1_u16, 2, 3, 5, 8, 13, 21, 44, 65, 0, 0xFFFF, 2, 3, 5, 7, 11]) };
+#[test]
+fn flt_roundtrip_small() {
+    const N: usize = 16;
+    const EXPECTED: [Additive<F2e16>; N] =
+        unsafe { std::mem::transmute([1_u16, 2, 3, 5, 8, 13, 21, 44, 65, 0, 0xFFFF, 2, 3, 5, 7, 11]) };
 
-//     let mut data = EXPECTED.clone();
+    let mut data = EXPECTED.clone();
 
-//     AfftField::afft(&mut data, N, N / 4);
+    AfftField::afft(&mut data, N, N / 4);
 
-//     /*
-//     println!("novel basis(rust):");
-//     data.iter().for_each(|sym| {
-//         print!(" {:04X}", sym.0);
-//     });
-//     println!("");
-//     */
+    /*
+    println!("novel basis(rust):");
+    data.iter().for_each(|sym| {
+        print!(" {:04X}", sym.0);
+    });
+    println!("");
+    */
     
-//     AfftField::inverse_afft(&mut data, N, N / 4);
+    AfftField::inverse_afft(&mut data, N, N / 4);
 
-//     assert_eq!(data, EXPECTED);
-// }
+    assert_eq!(data, EXPECTED);
+
+}

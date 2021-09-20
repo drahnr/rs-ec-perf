@@ -10,10 +10,6 @@ pub trait AfftField : FieldAdd where [(); Self::FIELD_BYTES]: Sized,
     type Multiplier = Logarithm<Self>;
     //#[dynamic(0)]
 
-    fn get_skew(i: usize) -> Logarithm<Self> {
-        <Self as FieldAdd>::AFFT_SKEW_TABLE[i]
-    }
-
     #[inline(always)]
     fn compute_skew(_depart_no: usize, j: usize, index: usize) -> Option<Logarithm<Self>> {
         // let i = (j+index) >> depart_no.trailing_zeros();
@@ -152,55 +148,56 @@ pub trait AfftField : FieldAdd where [(); Self::FIELD_BYTES]: Sized,
     }
     
 }
+
 use crate::f256::{F256};
 use crate::f2e16::F2e16;
 
-// #[cfg(test)]
-// mod tests {
+#[cfg(test)]
+mod tests {
 
-//    use super::*;
-//     fn flt_back_and_forth<F: AfftField>()
-//     where
-//         [u8; F::FIELD_BYTES]: Sized,
-//     [(); F::FIELD_BYTES]: Sized,
-//     [(); F::ONEMASK_USIZE]: Sized,
-//     [(); F::FIELD_SIZE >> 1]: Sized,
-//     <F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug,
-//     <F::Element as TryFrom<usize>>::Error : core::fmt::Debug
+   use super::*;
+    fn flt_back_and_forth<F: AfftField>()
+    where
+        [u8; F::FIELD_BYTES]: Sized,
+    [(); F::FIELD_BYTES]: Sized,
+    [(); F::ONEMASK_USIZE]: Sized,
+    [(); F::FIELD_SIZE >> 1]: Sized,
+    <F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug,
+    <F::Element as TryFrom<usize>>::Error : core::fmt::Debug
 
-//     {
-//         use rand::prelude::*;
-//         let mut rng = thread_rng();
-//         let uni = rand::distributions::Uniform::<usize>::new_inclusive(0, F::ONEMASK_USIZE);
+    {
+        use rand::prelude::*;
+        let mut rng = thread_rng();
+        let uni = rand::distributions::Uniform::<usize>::new_inclusive(0, F::ONEMASK_USIZE);
         
-//         const N: usize = 128;
-//         for (k,n) in &[(N/4,N)] {
-//             let mut data = (0..*n).into_iter().map( |_| Additive::<F>(<F::Element as TryFrom::<usize>>::try_from(uni.sample(&mut rng)).unwrap()) ).collect::<Vec<Additive::<F>>>();
-//             let expected = data.clone();
+        const N: usize = 128;
+        for (k,n) in &[(N/4,N)] {
+            let mut data = (0..*n).into_iter().map( |_| Additive::<F>(<F::Element as TryFrom::<usize>>::try_from(uni.sample(&mut rng)).unwrap()) ).collect::<Vec<Additive::<F>>>();
+            let expected = data.clone();
             
-//  F::afft(&mut data, *n, *k);
+ F::afft(&mut data, *n, *k);
             
-//             // make sure something is done
-//             assert!(data.iter().zip(expected.iter()).filter(|(a, b)| { a != b }).count() > 0);
+            // make sure something is done
+            assert!(data.iter().zip(expected.iter()).filter(|(a, b)| { a != b }).count() > 0);
             
             
-//             F::inverse_afft(&mut data, *n, *k);
+            F::inverse_afft(&mut data, *n, *k);
             
-//             assert_eq!(data, expected);
-//         }
-//     }
+            assert_eq!(data, expected);
+        }
+    }
     
     
-//     test_all_fields_for!(flt_back_and_forth);
+    test_all_fields_for!(flt_back_and_forth);
 
 
-// // // We want the low rate scheme given in
-// // // https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
-// // // and https://github.com/catid/leopard/blob/master/docs/LowRateDecoder.pdf
-// // // but this code resembles https://github.com/catid/leopard which
-// // // implements the high rate decoder in
-// // // https://github.com/catid/leopard/blob/master/docs/HighRateDecoder.pdf
-// // // We're hunting for the differences and trying to undersrtand the algorithm.
+// // We want the low rate scheme given in
+// // https://www.citi.sinica.edu.tw/papers/whc/5524-F.pdf
+// // and https://github.com/catid/leopard/blob/master/docs/LowRateDecoder.pdf
+// // but this code resembles https://github.com/catid/leopard which
+// // implements the high rate decoder in
+// // https://github.com/catid/leopard/blob/master/docs/HighRateDecoder.pdf
+// // We're hunting for the differences and trying to undersrtand the algorithm.
 
 
-// }
+}

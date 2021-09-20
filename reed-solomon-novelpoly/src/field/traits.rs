@@ -68,11 +68,14 @@ pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self>
     fn from_be_bytes_to_element(bytes: [u8; Self::FIELD_BYTES]) -> Self::Element;
     fn from_element_to_be_bytes(element: Self::Element) -> [u8; Self::FIELD_BYTES];
 
-    //because accessing log table carshes the compiler we are going to have this
-    //auxilary function 
-    fn get_log_table(index: usize) -> Self::Element;
-
+    //because accessing trait tables carshes the compiler we are going to have these
+    //auxilary functions
+    fn get_base_table(index: usize) -> Self::Element;
     fn get_exp_table(index: usize) -> Self::Element;
+    fn get_log_table(index: usize) -> Self::Element;
+    fn get_log_walsh(index: usize) -> Logarithm<Self>;
+    fn get_skew(i: usize) -> Logarithm<Self>;
+
 
 }
 

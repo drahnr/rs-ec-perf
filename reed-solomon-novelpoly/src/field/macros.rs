@@ -71,6 +71,14 @@ macro_rules! decl_field_additive {
             /// Logarithm form of twisted factors used in our additive FFT
             const AFFT_SKEW_TABLE: [Logarithm<Self>; Self::ONEMASK_USIZE] = [Logarithm(Self::ZERO_ELEMENT); Self::ONEMASK_USIZE] ;            
 
+	    fn get_base_table(index: usize) -> Self::Element {
+		#[cfg(table_bootstrap_complete)]
+		return BASE[index];
+			
+		#[cfg(not(table_bootstrap_complete))]
+		return Self::ZERO_ELEMENT;
+	    }
+	    
 	    fn get_log_table(index: usize) -> Self::Element {
 		#[cfg(table_bootstrap_complete)]
 		return LOG_TABLE[index];
@@ -89,6 +97,25 @@ macro_rules! decl_field_additive {
 		
 	    }
 
+	    fn get_log_walsh(index: usize) -> Logarithm<Self> {
+		#[cfg(table_bootstrap_complete)]
+		return LOG_WALSH[index];
+
+		#[cfg(not(table_bootstrap_complete))]
+		return Logarithm(Self::ZERO_ELEMENT);
+
+	    }
+
+	    fn get_skew(i: usize) -> Logarithm<Self> {
+		#[cfg(table_bootstrap_complete)]
+		return AFFT_SKEW_TABLE[i];
+			
+		#[cfg(not(table_bootstrap_complete))]
+		return Logarithm(Self::ZERO_ELEMENT);
+		
+	    }
+
+
         }
 
 
@@ -97,22 +124,22 @@ macro_rules! decl_field_additive {
         
  } // macro_rules! decl_field_additive
 
-// #[cfg(test)]
-// #[macro_export]
-// macro_rules! test_all_fields_for {
-//         // Arguments are module name and function name of function to test bench
-//         ($fn_name:ident) => {
-//             // The macro will expand into the contents of this block.
-//             paste::item! {
-//                 #[test]
-//                 fn [< test_ $fn_name F256>] () {
-//                     $fn_name::<F256>();
-//                 }
+#[cfg(test)]
+#[macro_export]
+macro_rules! test_all_fields_for {
+        // Arguments are module name and function name of function to test bench
+        ($fn_name:ident) => {
+            // The macro will expand into the contents of this block.
+            paste::item! {
+                #[test]
+                fn [< test_ $fn_name F256>] () {
+                    $fn_name::<F256>();
+                }
 
-//                 #[test]
-//                 fn [< test_ $fn_name F2e16>] () {
-//                     $fn_name::<F2e16>();
-//                 }
-//             }
-//         };
-//  }//macro_rules! tess_all_fields_for
+                #[test]
+                fn [< test_ $fn_name F2e16>] () {
+                    $fn_name::<F2e16>();
+                }
+            }
+        };
+ }//macro_rules! tess_all_fields_for

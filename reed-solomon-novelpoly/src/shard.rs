@@ -1,7 +1,6 @@
 use std::iter;
 use std::fmt::Debug;
 use crate::field::FieldAdd;
-use crate::errors::*;
 
 pub trait Shard<F: FieldAdd>:
     Clone

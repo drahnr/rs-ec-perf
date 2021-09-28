@@ -65,18 +65,21 @@ impl<F: FieldAdd> AsMut<[[u8; F::FIELD_BYTES]]> for WrappedShard<F> {
     }
 }
 
-impl<F: FieldAdd> std::iter::FromIterator<[u8; F::FIELD_BYTES]> for WrappedShard<F> {
-    fn from_iter<I: IntoIterator<Item = [u8; F::FIELD_BYTES]>>(iterable: I) -> Self {
-        let iter = iterable.into_iter();
 
-        let (l, _) = iter.size_hint();
-        let mut inner = Vec::with_capacity(l * F::FIELD_BYTES);
+// impl<F: FieldAdd> std::iter::FromIterator<Iterator<[u8; F::FIELD_SIZE]>>  for WrappedShard<F>
+// {
 
-        for cur_chunk in iter {
-            cur_chunk.iter().map(|a| inner.push(*a));
-        }
+//     fn from_iter(iterable: Iterator<[u8; F::FIELD_SIZE]>) -> Self {
+//         let iter = iterable.into_iter();
 
-        debug_assert_eq!(inner.len() & 0x01, 0);
-        WrappedShard::<F> { inner: inner, _marker: PhantomData }
-    }
-}
+//         let (l, _) = iter.size_hint();
+//         let mut inner = Vec::with_capacity(F::FIELD_BYTES);
+
+//         for cur_chunk in iterable {
+//             cur_chunk.iter().map(|a| inner.push(*a));
+//         }
+
+//         debug_assert_eq!(inner.len() & 0x01, 0);
+//         WrappedShard::<F> { inner: inner, _marker: PhantomData }
+//     }
+// }

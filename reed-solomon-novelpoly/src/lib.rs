@@ -1,6 +1,5 @@
 //#![forbid(unused_crate_dependencies)]
-#![feature(const_generics)]
-#![feature(const_evaluatable_checked)]
+#![feature(generic_const_exprs)]
 #![feature(destructuring_assignment)]
 #![feature(associated_type_defaults)]
 #![feature(array_windows)]
@@ -18,7 +17,6 @@ pub use self::field::f256::F256;
 pub use self::field::f2e16::F2e16;
 pub use self::field::{FieldAdd, FieldMul, TruncateTo, Logarithm, Additive, AfftField, walsh, gf_mul_bitpoly_reduced};
 
-#[macro_use]
 pub use self::field::macros;
 
 mod novel_poly_basis;

@@ -1,6 +1,5 @@
 #![allow(unused)]
-#![feature(const_generics)]
-#![feature(const_evaluatable_checked)]
+#![feature(generic_const_exprs)]
 #![feature(associated_type_defaults)]
 #![feature(destructuring_assignment)]
 

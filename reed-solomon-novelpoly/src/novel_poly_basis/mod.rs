@@ -1,6 +1,3 @@
-#![feature(const_generics)]
-#![feature(const_evaluatable_checked)]
-#![feature(array_windows)]
 // Encoding/erasure decoding for Reed-Solomon codes over binary extension fields
 //
 // Derived impl of `RSAErasureCode.c`.
@@ -14,8 +11,7 @@ use core::ops::{Mul};
 
 use crate::errors::*;
 use crate::{Shard};
-use crate::field::{FieldAdd, FieldMul, TruncateTo, Logarithm, Additive, walsh, AfftField, tweaked_formal_derivative};
-use crate::field::macros;
+use crate::field::{FieldAdd, TruncateTo, Logarithm, Additive, walsh, AfftField, tweaked_formal_derivative};
 
 pub mod availability_util;
 pub use availability_util::*;

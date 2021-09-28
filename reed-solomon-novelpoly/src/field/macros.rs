@@ -1,9 +1,5 @@
 /// Declare field and include its tables
 ///
-/// Requires Elt and Wide be defined previosuly.
-#[cfg(table_bootstrap_complete)]
-use paste::paste;
-
 macro_rules! decl_field_additive {
  	($name: tt, bits = $fbits:literal, generator = $generator: literal, elt = $elt:tt, wide = $wide:tt, cantor_base_final_elt = $cantor_base_final_elt: literal) => {
 

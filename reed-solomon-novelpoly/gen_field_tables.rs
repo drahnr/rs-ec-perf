@@ -97,7 +97,7 @@ where
 	write_static(&mut w, "LOG_WALSH", &log_walsh, ["[Logarithm<",F::FIELD_NAME,">; <",F::FIELD_NAME," as FieldAdd>::FIELD_SIZE]"].concat().as_str())?;
 	                                       // write_static(w, "LOG_WALSH", &log_walsh, ["[Logarithm::<<",F::FIELD_NAME," as FieldAdd>>; <",F::FIELD_NAME," as FieldAdd>::FIELD_SIZE]"].concat().as_str())?;
 
-   let (afft_skew_table, B) = initialize_afft_table::<F>(&log_table, &exp_table);
+   let (afft_skew_table, b) = initialize_afft_table::<F>(&log_table, &exp_table);
 	write_static(&mut w, "AFFT_SKEW_TABLE", &afft_skew_table, ["[Logarithm<",F::FIELD_NAME,">; <",F::FIELD_NAME," as FieldAdd>::ONEMASK_USIZE]"].concat().as_str())?;
 	                                       // write_static(w, "LOG_WALSH", &log_walsh, ["[Logarithm::<<",F::FIELD_NAME," as FieldAdd>>; <",F::FIELD_NAME," as FieldAdd>::F
 //                                           AFFT_SKEW_TABLE                                           
@@ -170,7 +170,7 @@ where  <F::Wide as TryInto<F::Element>>::Error: core::fmt::Debug,
     		skews_multiplier[i] = Logarithm::<F>(log_table[Into::<usize>::into(skews_additive[i].0)]);
     	}
 
-        let mut B = vec![Logarithm(F::ZERO_ELEMENT); F::FIELD_SIZE >> 1];
+        let mut b = vec![Logarithm(F::ZERO_ELEMENT); F::FIELD_SIZE >> 1];
 
     	// TODO: How does this alter base?
     	base[0] = F::ONEMASK - base[0];
@@ -180,19 +180,19 @@ where  <F::Wide as TryInto<F::Element>>::Error: core::fmt::Debug,
             ) % (F::ONEMASK_WIDE) );
     	}
 
-    	// TODO: What is B anyways?
-    	B[0] = Logarithm::<F>(F::ZERO_ELEMENT);
+    	// TODO: What is b anyways?
+    	b[0] = Logarithm::<F>(F::ZERO_ELEMENT);
     	for i in 0..(F::FIELD_BITS - 1) {
     		let depart = 1 << i;
     		for j in 0..depart {
                 let wide_base : F::Wide = (base[i].into());
-                let wide_exponent : F::Wide = (B[j].to_wide() + wide_base) % F::ONEMASK_WIDE;
+                let wide_exponent : F::Wide = (b[j].to_wide() + wide_base) % F::ONEMASK_WIDE;
                 let exponent : F::Element = TruncateTo::<F>::truncate(wide_exponent);
-    			B[j + depart] = Logarithm::<F>(exponent);
+    			b[j + depart] = Logarithm::<F>(exponent);
     		}
     	}
 
-        (skews_multiplier, B)
+        (skews_multiplier, b)
     }
                            
 /// Create tables file

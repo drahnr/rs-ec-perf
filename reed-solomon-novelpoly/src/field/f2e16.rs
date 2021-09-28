@@ -1,8 +1,4 @@
-#[cfg(table_bootstrap_complete)]
-use super::*;
-use std::convert::{From, TryInto};
-use crate::{FieldAdd, TruncateTo, Logarithm, walsh, Additive};
-use core::ops::{Mul};
+use crate::{FieldAdd, Logarithm};
 
 decl_field_additive!(F2e16, bits = 16, generator = 0x2D, elt = u16, wide = u32, cantor_base_final_elt = 39198);
 

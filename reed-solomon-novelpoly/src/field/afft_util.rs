@@ -1,7 +1,4 @@
-use super::{FieldAdd, FieldMul, Logarithm, Additive};
-use core::convert::{TryFrom,TryInto, Into};
-
-use static_init::{dynamic};
+use super::{FieldAdd,  Additive};
 
 /// Formal derivative of polynomial in tweaked?? basis
 #[allow(non_snake_case)]

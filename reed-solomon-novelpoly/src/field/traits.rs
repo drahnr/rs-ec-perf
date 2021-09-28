@@ -1,6 +1,6 @@
 use core::ops::{BitXor, BitXorAssign, Mul, MulAssign, Add, Shl, Shr, Index};
 use std::ops::{BitAnd, Sub};
-use derive_more::{Add, AddAssign, BitXor, BitXorAssign, Sub, SubAssign, BitAnd, Display};
+use derive_more::{Add, AddAssign, Sub, SubAssign, Display};
 use num::Integer;
 use core::convert::{TryFrom,TryInto, Into};
 

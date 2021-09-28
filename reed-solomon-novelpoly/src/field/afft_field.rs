@@ -1,7 +1,5 @@
-use std::convert::{TryInto, TryFrom};
-
-use core::ops::Mul;
-use crate::{FieldAdd, Logarithm, Additive, TruncateTo, FieldMul};
+use std::convert::{TryInto};
+use crate::{FieldAdd, Logarithm, Additive};
 
 
 pub trait AfftField : FieldAdd where [(); Self::FIELD_BYTES]: Sized,

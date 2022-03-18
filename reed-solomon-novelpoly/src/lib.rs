@@ -29,8 +29,8 @@ pub use self::shard::{Shard};
 pub mod wrapped_shard;
 pub use self::wrapped_shard::WrappedShard;
 
-#[cfg(feature = "with-alt-cxx-impl")]
-pub mod cxx;
+//#[cfg(feature = "with-alt-cxx-impl")]
+//pub mod cxx;
 
 #[cfg(test)]
 mod test {

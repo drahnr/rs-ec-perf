@@ -1,4 +1,4 @@
-use std::convert::{TryInto};
+use std::convert::{TryInto, TryFrom};
 use crate::{FieldAdd, Logarithm, Additive};
 
 

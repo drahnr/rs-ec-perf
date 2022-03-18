@@ -8,21 +8,17 @@ use core::convert::{TryFrom,TryInto, Into};
 use super::gf_mul_bitpoly_reduced;
 
 /// Additive finite field representation
-pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self> + Eq  
+pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self> + Eq  + 'static
 {    
     const FIELD_BITS: usize;
     const FIELD_BYTES: usize = Self::FIELD_BITS / 8;
     const FIELD_SIZE: usize = 1_usize << Self::FIELD_BITS;
     const FIELD_NAME: &'static str;
     
-    type Element : Sized + Clone + Copy + core::fmt::Debug + Default + PartialEq<Self::Element> + Eq + BitXor<Self::Element, Output = Self::Element> + BitXorAssign<Self::Element> + TryFrom<Self::Wide> + Integer + core::ops::AddAssign +  core::ops::SubAssign + Shl<usize, Output = Self::Element> + Shr<usize, Output = Self::Element> +  Into<usize> + Into<Self::Wide> + TryFrom<usize> + Into<usize> + Default + From<bool>;
-    type Wide: Copy + Integer + BitAnd<Self::Wide, Output = Self::Wide>  + Shl<usize, Output = Self::Wide> + Shr<usize, Output = Self::Wide> + BitXor<Self::Wide, Output = Self::Wide> + BitXorAssign<Self::Wide> + TryInto<Self::Element> + From<Self::Element>;
-    // const ONE: Self;
-    type BaseArray;
-    type FieldTableArray : Index<usize, Output=Self::Element>; //TODO: just index over the field elemennts arrays are not that sexy.
-    type LogWalshTable : Index<usize, Output=Logarithm<Self>>;
-    type AfftSkewTable : Index<usize, Output=Logarithm<Self>>;
+    type Element : Sized + Clone + Copy + core::fmt::Debug + Default + PartialEq<Self::Element> + Eq + BitXor<Self::Element, Output = Self::Element> + BitXorAssign<Self::Element> + TryFrom<Self::Wide> + Integer + core::ops::AddAssign +  core::ops::SubAssign + Shl<usize, Output = Self::Element> + Shr<usize, Output = Self::Element> +  Into<usize> + Into<Self::Wide> + TryFrom<usize> + Into<usize> + Default + From<bool> + 'static;
+    type Wide: Copy + Integer + core::fmt::Debug + BitAnd<Self::Wide, Output = Self::Wide>  + Shl<usize, Output = Self::Wide> + Shr<usize, Output = Self::Wide> + BitXor<Self::Wide, Output = Self::Wide> + BitXorAssign<Self::Wide> + TryInto<Self::Element> + From<Self::Element>;
 
+    // const ONE: Self;
     /// Quotient ideal generator given by tail of irreducible polynomial
     const GENERATOR: Self::Element;
 
@@ -41,13 +37,13 @@ pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self>
     const ONE_ELEMENT_WIDE: Self::Wide;
     const ONEMASK_WIDE: Self::Wide; // should be  = (F::FIELD_SIZE - 1);
 
-    const BASE: Self::BaseArray;
-    const LOG_TABLE: Self::FieldTableArray;
-    const EXP_TABLE: Self::FieldTableArray;
-    const LOG_WALSH: Self::LogWalshTable;
+    const BASE: &'static [Self::Element];
+    const LOG_TABLE: &'static [Self::Element];
+    const EXP_TABLE: &'static [Self::Element];
+    const LOG_WALSH: &'static [Logarithm<Self>];
     /// Additive FFT and IFFT skew table and formal derivative transform table
     /// for computing Reed-Solomon in the "novel polynomial basis".
-    const AFFT_SKEW_TABLE: Self::AfftSkewTable;
+    const AFFT_SKEW_TABLE: &'static [Logarithm<Self>];
 
     fn generate_cantor_basis(mut next: Self::Element) -> Option<[Self::Element; Self::FIELD_BITS]> where
         <<Self as FieldAdd>::Wide as TryInto<<Self as FieldAdd>::Element>>::Error: core::fmt::Debug,
@@ -215,7 +211,7 @@ impl <F> Mul<Logarithm<F>> for Logarithm<F> where F: FieldAdd, [u8; F::FIELD_BYT
         let lhs: F::Element = TruncateTo::<F>::truncate(log);
         let rhs: F::Element = TruncateTo::<F>::truncate(log >> F::FIELD_BITS);
 		let offset : F::Element = lhs + rhs;
-		Additive(F::EXP_TABLE[offset.into()])
+		Additive(F::EXP_TABLE[<F::Element as Into<usize>>::into(offset)])
     }
 
     #[cfg(not(table_bootstrap_complete))]

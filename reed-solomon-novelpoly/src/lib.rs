@@ -36,29 +36,29 @@ pub use self::wrapped_shard::WrappedShard;
 mod test {
     use super::*;
     use std::convert::TryInto;
-    //use reed_solomon_tester::{BYTES, N_SHARDS};
-    //use self::novel_poly_basis::roundtrip;
+    use reed_solomon_tester::{BYTES, N_SHARDS};
+    use self::novel_poly_basis::roundtrip;
 
     // #[cfg(feature = "naive")]
     // fn status_quo_roundtrip<F: FieldAdd>() -> Result<()> {
     //     roundtrip(status_quo::encode::<F, WrappedShard>, status_quo::reconstruct::<F, WrappedShard>, &BYTES[..1337], N_SHARDS)
     // }
 
-    // fn novel_poly_basis_roundtrip<F: AfftField>() -> Result<()>
-    //     where
-    //  [u8; F::FIELD_BYTES]: Sized,
-    // [(); F::FIELD_BYTES]: Sized,
-    // [(); F::ONEMASK_USIZE]: Sized,
-    // [(); F::FIELD_SIZE >> 1]: Sized,
-    // <F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug
-    // {
-    //     roundtrip(
-    //         novel_poly_basis::encode::<F, WrappedShard<F>>,
-    //         novel_poly_basis::reconstruct::<F, WrappedShard<F>>,
-    //         &BYTES[..1337],
-    //         N_SHARDS,
-    //     )
-    // }
-    // test_all_fields_for!(novel_poly_basis_roundtrip);
+    fn novel_poly_basis_roundtrip<F: AfftField>() -> Result<()>
+        where
+     [u8; F::FIELD_BYTES]: Sized,
+    [(); F::FIELD_BYTES]: Sized,
+    [(); F::ONEMASK_USIZE]: Sized,
+    [(); F::FIELD_SIZE >> 1]: Sized,
+    <F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug
+    {
+        roundtrip(
+            novel_poly_basis::encode::<F, WrappedShard<F>>,
+            novel_poly_basis::reconstruct::<F, WrappedShard<F>>,
+            &BYTES[..1337],
+            N_SHARDS,
+        )
+    }
+    test_all_fields_for!(novel_poly_basis_roundtrip);
     
 }

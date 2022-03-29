@@ -10,6 +10,7 @@ use crate::field::f256::F256;
 use crate::WrappedShard;
 use assert_matches::assert_matches;
 use rand::distributions::Uniform;
+use rand::distributions::uniform::SampleUniform;
 use rand::prelude::*;
 use rand::rngs::SmallRng;
 use rand::seq::index::IndexVec;
@@ -432,26 +433,26 @@ fn shard_len_is_reasonable<F: FieldAdd>() {
 }
 test_all_fields_for!(shard_len_is_reasonable);
 
-// pub fn roundtrip<'s, Enc, Recon, E, S, F>(
-//  	encode: Enc,
-//  	reconstruct: Recon,
-//  	payload: &'s [u8],
-//  	target_shard_count: usize,
-//  ) -> Result<()>
-//  where
-//  	Enc: Fn(&'s [u8], usize) -> Result<Vec<S>>,
-//  	Recon: Fn(Vec<Option<S>>, usize) -> Result<Vec<u8>>,
-//      F: FieldAdd,
-//      [(); F::FIELD_BYTES]: Sized,
-//     S: Clone + AsRef<[u8]> + AsMut<[[u8; F::FIELD_BYTES]]> + AsRef<[[u8; F::FIELD_BYTES]]> + iter::FromIterator<[u8; F::FIELD_BYTES]> + From<Vec<u8>>,
-//  {
-//  	// let v = roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E, F>(
-//  	// 	encode,
-//  	// 	reconstruct,
-//  	// 	payload,
-//  	// 	target_shard_count,
-//  	// 	drop_random_max,
-//  	// )?;
-//  	// Ok(v)
-//      Ok(vec!([]))
-//  }
+pub fn roundtrip<'s, Enc, Recon, E, S, F>(
+ 	encode: Enc,
+ 	reconstruct: Recon,
+ 	payload: &'s [u8],
+ 	target_shard_count: usize,
+ ) -> Result<()>
+ where
+ 	Enc: Fn(&'s [u8], usize) -> Result<Vec<S>>,
+ 	Recon: Fn(Vec<Option<S>>, usize) -> Result<Vec<u8>>,
+     F: FieldAdd,
+     [(); F::FIELD_BYTES]: Sized,
+    S: Clone + AsRef<[u8]> + AsMut<[[u8; F::FIELD_BYTES]]> + AsRef<[[u8; F::FIELD_BYTES]]> + iter::FromIterator<[u8; F::FIELD_BYTES]> + From<Vec<u8>>,
+ {
+ 	// let v = roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E, F>(
+ 	// 	encode,
+ 	// 	reconstruct,
+ 	// 	payload,
+ 	// 	target_shard_count,
+ 	// 	drop_random_max,
+ 	// )?;
+ 	// Ok(v)
+     Ok(vec!([]))
+ }

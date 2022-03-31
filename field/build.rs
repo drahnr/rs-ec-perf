@@ -5,18 +5,17 @@
 
 use std::io;
 
-include!("src/util.rs");
-include!("src/field/traits.rs");
-include!("src/field/macros.rs");
-include!("src/field/field_util.rs");
+include!("src/traits.rs");
+include!("src/macros.rs");
+include!("src/field_util.rs");
 include!("gen_field_tables.rs");
 
 mod f2e16 {
-    include!("src/field/f2e16.rs");
+    include!("src/f2e16.rs");
 }
 
 mod f256 {
-    include!("src/field/f256.rs");
+    include!("src/f256.rs");
 }
 
 #[cfg(feature = "with-alt-cxx-impl")]

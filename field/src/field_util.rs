@@ -1,8 +1,8 @@
 #[cfg(table_bootstrap_complete)]
 use core::convert::{TryInto, Into};
 #[cfg(table_bootstrap_complete)]
-use super::*;
-    
+use crate::traits::{FieldAdd, Logarithm};
+
 /// Fast Walsh–Hadamard transform over modulo ONEMASK
 pub fn walsh<F: FieldAdd>(data: &mut [Logarithm<F>], size: usize) where <<F as FieldAdd>::Wide as TryInto<<F as FieldAdd>::Element>>::Error: core::fmt::Debug{
 	let mut depart_no = 1_usize;
@@ -62,5 +62,5 @@ fn is_cantor_basis<F: FieldAdd>() where <F::Wide as TryInto<<F as FieldAdd>::Ele
     }
 }
 
-#[cfg(test)]        
+#[cfg(test)]
 test_all_fields_for!(is_cantor_basis);

@@ -10,7 +10,7 @@ use crate::field::f256::F256;
 use crate::WrappedShard;
 use assert_matches::assert_matches;
 use rand::distributions::Uniform;
-use rand::distributions::uniform::SampleUniform;
+use rand::distributions::uniform::{SampleUniform, SampleBorrow};
 use rand::prelude::*;
 use rand::rngs::SmallRng;
 use rand::seq::index::IndexVec;
@@ -21,12 +21,17 @@ use crate::novel_poly_basis::{ReedSolomon};
 use crate::availability_util::{reconstruct, encode};
 
 use std::marker::PhantomData;
+use std::convert::{TryInto, TryFrom};
+
+use crate::field::FieldAdd;
 
 /// Generate a random index
-fn rand_gf_element<F: FieldAdd>() -> Additive<F> {
+fn rand_gf_element<F: FieldAdd>() -> Additive<F> where
+    <F::Element as TryFrom<usize>>::Error : core::fmt::Debug
+{
     let mut rng = thread_rng();
-    let uni = Uniform::<F::Element>::new_inclusive(0, F::ONEMASK_USIZE);
-    Additive(uni.sample(&mut rng))
+    let uni = Uniform::<usize>::new_inclusive(0, F::ONEMASK_USIZE);
+    Additive(<F::Element as TryFrom::<usize>>::try_from(uni.sample(&mut rng)).unwrap())
 }
 
 #[test]
@@ -60,7 +65,7 @@ fn base_2_upper_bound() {
 
 fn k_n_construction<F: AfftField>()
 where
- [u8; F::FIELD_BYTES]: Sized,
+[u8; F::FIELD_BYTES]: Sized,
 [(); F::FIELD_BYTES]: Sized,
 [(); F::ONEMASK_USIZE]: Sized,
 [(); F::FIELD_SIZE >> 1]: Sized,
@@ -69,7 +74,7 @@ where
     // skip the two, it's a special case
     for validator_count in 3_usize..=8200 {
         let rs =
-            ReedSolomon::<Additive<F>>::new(validator_count, recoverablity_subset_size(validator_count)).unwrap();
+            ReedSolomon::<F>::new(validator_count, recoverablity_subset_size(validator_count)).unwrap();
 
         assert_eq!(rs.get_number_of_all_shards(), validator_count);
         assert!(validator_count <= rs.n, "vc={} <= n={} violated", validator_count, rs.n); //no public interface to n as it is internal to the RS coder
@@ -122,13 +127,23 @@ where
 // }
 
 // for shards of length 1
-fn wrapped_shard_len1_as_gf_sym<F: FieldAdd>(w: &WrappedShard<F>) -> Additive<F> {
-    let val = AsRef::<[[u8; 2]]>::as_ref(w)[0];
-    Additive(u16::from_be_bytes(val))
+fn wrapped_shard_len1_as_gf_sym<F: FieldAdd>(w: &WrappedShard<F>) -> Additive<F>
+where  [(); F::FIELD_BYTES]: Sized
+{
+    let val = AsRef::<[[u8; F::FIELD_BYTES]]>::as_ref(w)[0];
+    Additive(F::from_be_bytes_to_element(val))
 }
 
 #[cfg(test)]
-fn sub_eq_big_for_small_messages<F: FieldAdd>() {
+fn sub_eq_big_for_small_messages<F: AfftField>() where
+    <F::Element as TryFrom<usize>>::Error : core::fmt::Debug,
+<F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug,
+[(); F::FIELD_BYTES]: Sized,
+[(); F::ONEMASK_USIZE]: Sized,
+[(); F::FIELD_SIZE >> 1]: Sized,
+
+
+{
     const N_WANTED_SHARDS: usize = 128;
     const N: usize = N_WANTED_SHARDS;
     const K: usize = 32;
@@ -136,7 +151,7 @@ fn sub_eq_big_for_small_messages<F: FieldAdd>() {
     const K2: usize = K * 2;
 
     // assure the derived sizes match
-    let rs = ReedSolomon::<Additive<F>>::new(N_WANTED_SHARDS, N_WANTED_SHARDS / 3).unwrap();
+    let rs = ReedSolomon::<F>::new(N_WANTED_SHARDS, N_WANTED_SHARDS / 3).unwrap();
     assert_eq!(rs.n, N);
     assert_eq!(rs.k, K);
 
@@ -150,7 +165,7 @@ fn sub_eq_big_for_small_messages<F: FieldAdd>() {
         data
     };
 
-    let mut codewords = rs.encode::<WrappedShard>(&data).unwrap();
+    let mut codewords = rs.encode::<WrappedShard<F>>(&data).unwrap();
     let mut codewords_sub = rs.encode_sub(&data).unwrap();
 
     itertools::assert_equal(codewords.iter().map(wrapped_shard_len1_as_gf_sym), codewords_sub.iter().copied());
@@ -166,11 +181,11 @@ fn sub_eq_big_for_small_messages<F: FieldAdd>() {
     let erasures = codewords.iter().map(|x| x.is_none()).collect::<Vec<bool>>();
 
     // Evaluate error locator polynomial only once
-    let mut error_poly_in_log = vec![Logarithm(0); F::FIELD_SIZE];
+    let mut error_poly_in_log = vec![Logarithm(F::ZERO_ELEMENT); F::FIELD_SIZE];
     rs.eval_error_polynomial(&erasures[..], &mut error_poly_in_log[..]);
 
     let reconstructed_sub = rs.reconstruct_sub(&codewords_sub[..], &erasures[..], &error_poly_in_log).unwrap();
-    let reconstructed = reconstruct(codewords, rs.n).unwrap();
+    let reconstructed = reconstruct::<F,WrappedShard<F>>(codewords, rs.n).unwrap();
     itertools::assert_equal(reconstructed.iter().take(K2), reconstructed_sub.iter().take(K2));
     itertools::assert_equal(reconstructed.iter().take(K2), data.iter());
     itertools::assert_equal(reconstructed_sub.iter().take(K2), data.iter());
@@ -181,7 +196,7 @@ test_all_fields_for!(sub_eq_big_for_small_messages);
 #[cfg(test)]
 fn roundtrip_for_large_messages<F: AfftField>() -> Result<()>
 where
- [u8; F::FIELD_BYTES]: Sized,
+F: FieldAdd,
 [(); F::FIELD_BYTES]: Sized,
 [(); F::ONEMASK_USIZE]: Sized,
 [(); F::FIELD_SIZE >> 1]: Sized,
@@ -194,7 +209,7 @@ where
     const K2: usize = K * 2;
 
     // assure the derived sizes match
-    let rs = ReedSolomon::<Additive<F>>::new(N_WANTED_SHARDS, N_WANTED_SHARDS.saturating_sub(1) / 3)
+    let rs = ReedSolomon::<F>::new(N_WANTED_SHARDS, N_WANTED_SHARDS.saturating_sub(1) / 3)
         .expect("Const test parameters are ok. qed");
     assert_eq!(rs.n, N);
     assert_eq!(rs.k, K);
@@ -207,7 +222,7 @@ where
     let payload = &BYTES[0..K2 * shard_length];
     // let payload = &BYTES[..];
 
-    let mut shards = encode::<WrappedShard>(payload, N_WANTED_SHARDS).expect("Const test parameters are ok. qed");
+    let mut shards = encode::<F, WrappedShard<F>>(payload, N_WANTED_SHARDS).expect("Const test parameters are ok. qed");
 
     // for (idx, shard) in shards.iter().enumerate() {
     //	let sl = AsRef::<[[u8; 2]]>::as_ref(&shard).len();
@@ -216,12 +231,12 @@ where
 
     let (received_shards, dropped_indices) = deterministic_drop_shards_clone(&mut shards, rs.n, rs.k);
 
-    let reconstructed_payload = reconstruct::<WrappedShard>(received_shards, N_WANTED_SHARDS).unwrap();
+    let reconstructed_payload = reconstruct::<F, WrappedShard<F>>(received_shards, N_WANTED_SHARDS).unwrap();
 
     assert_recovery(payload, &reconstructed_payload, dropped_indices);
 
-    // verify integrity with criterion tests
-    roundtrip_w_drop_closure::<_, _, _, SmallRng, WrappedShard, _>(
+    // // verify integrity with criterion tests
+    roundtrip_w_drop_closure::<_, _, _, SmallRng, WrappedShard<_>, _, F>(
         encode,
         reconstruct,
         payload,
@@ -229,7 +244,7 @@ where
         deterministic_drop_shards,
     )?;
 
-    roundtrip_w_drop_closure::<_, _, _, SmallRng, WrappedShard, _>(
+    roundtrip_w_drop_closure::<_, _, _, SmallRng, WrappedShard<_>, _, F>(
         encode,
         reconstruct,
         payload,
@@ -252,11 +267,11 @@ macro_rules! simplicissimus {
     ($name:ident: validators: $validator_count:literal, payload: $payload_size:literal; $matchmaker:pat => $assertive:expr) => {
         #[test]
         fn $name () {
-            let res = roundtrip_w_drop_closure::<'_,_,_,_,SmallRng, WrappedShard, _>(
+            let res = roundtrip_w_drop_closure::<'_,_,_,_,SmallRng, WrappedShard<_>, _, F2e16>(
                 encode,
                 reconstruct,
                 &BYTES[0..$payload_size], $validator_count,
-                    deterministic_drop_shards::<WrappedShard, SmallRng>);
+                    deterministic_drop_shards::<WrappedShard<_>, SmallRng>);
             assert_matches::assert_matches!(res, $matchmaker => {
                 $assertive
             });
@@ -386,9 +401,9 @@ where
 [(); F::FIELD_SIZE >> 1]: Sized,
 <F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug
 {
-    assert_matches!(ReedSolomon::<Additive<F>>::new(0, recoverablity_subset_size(0)), Err(_));
+    assert_matches!(ReedSolomon::<F>::new(0, recoverablity_subset_size(0)), Err(_));
 
-    assert_matches!(ReedSolomon::<Additive<F>>::new(1, recoverablity_subset_size(1)), Err(_));
+    assert_matches!(ReedSolomon::<F>::new(1, recoverablity_subset_size(1)), Err(_));
 
     // assert_eq!(
     // 	ReedSolomon::<f2e16::Additive>::new(2, recoverablity_subset_size(2)).unwrap(),
@@ -413,8 +428,14 @@ where
 test_all_fields_for!(test_rs_code_params);
 
 #[cfg(test)]
-fn shard_len_is_reasonable<F: FieldAdd>() {
-    let rs = ReedSolomon::<Additive<F>>::new(5, 4).unwrap();
+fn shard_len_is_reasonable<F: AfftField>()
+where
+    <F::Wide as TryInto<F::Element>>::Error : core::fmt::Debug,
+[(); F::FIELD_BYTES]: Sized,
+[(); F::ONEMASK_USIZE]: Sized,
+[(); F::FIELD_SIZE >> 1]: Sized,
+{
+    let rs = ReedSolomon::<F>::new(5, 4).unwrap();
 
     // since n must be a power of 2
     // the chunk sizes becomes slightly larger
@@ -454,5 +475,6 @@ pub fn roundtrip<'s, Enc, Recon, E, S, F>(
  	// 	drop_random_max,
  	// )?;
  	// Ok(v)
-     Ok(vec!([]))
+    //Ok(vec!([]))
+    Ok(())
  }

@@ -147,9 +147,6 @@ pub trait AfftField : FieldAdd where [(); Self::FIELD_BYTES]: Sized,
     
 }
 
-use crate::f256::{F256};
-use crate::f2e16::F2e16;
-
 #[cfg(test)]
 mod tests {
 

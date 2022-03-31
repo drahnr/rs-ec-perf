@@ -1,8 +1,9 @@
 use core::ops::{BitXor, BitXorAssign, Mul, MulAssign, Add, Shl, Shr, Index};
 use std::ops::{BitAnd, Sub};
 use derive_more::{Add, AddAssign, Sub, SubAssign, Display};
-use num::Integer;
+use num::{PrimInt, NumCast};
 use core::convert::{TryFrom,TryInto, Into};
+
 
 #[cfg(table_bootstrap_complete)]
 use super::gf_mul_bitpoly_reduced;
@@ -15,8 +16,9 @@ pub trait FieldAdd : Clone + Copy + core::fmt::Debug + Default + PartialEq<Self>
     const FIELD_SIZE: usize = 1_usize << Self::FIELD_BITS;
     const FIELD_NAME: &'static str;
     
-    type Element : Sized + Clone + Copy + core::fmt::Debug + Default + PartialEq<Self::Element> + Eq + BitXor<Self::Element, Output = Self::Element> + BitXorAssign<Self::Element> + TryFrom<Self::Wide> + Integer + core::ops::AddAssign +  core::ops::SubAssign + Shl<usize, Output = Self::Element> + Shr<usize, Output = Self::Element> +  Into<usize> + Into<Self::Wide> + TryFrom<usize> + Into<usize> + Default + From<bool> + 'static;
-    type Wide: Copy + Integer + core::fmt::Debug + BitAnd<Self::Wide, Output = Self::Wide>  + Shl<usize, Output = Self::Wide> + Shr<usize, Output = Self::Wide> + BitXor<Self::Wide, Output = Self::Wide> + BitXorAssign<Self::Wide> + TryInto<Self::Element> + From<Self::Element>;
+    type Element : PrimInt + Default + core::fmt::Debug + BitXorAssign<Self::Element> + TryFrom<Self::Wide> +  core::ops::AddAssign +  core::ops::SubAssign + Into<usize>  + Into<Self::Wide> + TryFrom<usize> +  From<bool> + NumCast;
+
+    type Wide: PrimInt + core::fmt::Debug + BitXorAssign<Self::Wide> +  From<Self::Element>;
 
     // const ONE: Self;
     /// Quotient ideal generator given by tail of irreducible polynomial

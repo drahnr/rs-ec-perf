@@ -1,3 +1,6 @@
+#![feature(generic_const_exprs)]
+#![feature(associated_type_defaults)]
+
 #[macro_use]
 pub mod macros;
 mod traits;

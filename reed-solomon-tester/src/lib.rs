@@ -7,6 +7,7 @@ use std::iter;
 use std::result;
 
 use reed_solomon_novelpoly::{Shard, FieldAdd};
+use std::convert::{TryFrom};
 
 pub static SMALL_RNG_SEED: [u8; 32] = [
 	0, 6, 0xFA, 0, 0x37, 3, 19, 89, 32, 032, 0x37, 0x77, 77, 0b11, 112, 52, 12, 40, 82, 34, 0, 0, 0, 1, 4, 4, 1, 4, 99,
@@ -107,9 +108,10 @@ pub fn roundtrip<'s, Enc, Recon, E, S, F>(
  	Enc: Fn(&'s [u8], usize) -> result::Result<Vec<S>, E>,
  	Recon: Fn(Vec<Option<S>>, usize) -> result::Result<Vec<u8>, E>,
  	E: error::Error + Send + Sync + 'static,
-     F: FieldAdd,
-     [(); F::FIELD_BYTES]: Sized,
+    F: FieldAdd,
+    [(); F::FIELD_BYTES]: Sized,
     S: Shard<F>,
+    <F::Element as TryFrom<F::Wide>>::Error : core::fmt::Debug
  {
  	let v = roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E, F>(
  		encode,
@@ -136,7 +138,9 @@ where
 	DropFun: for<'z> FnMut(&'z mut [Option<S>], usize, usize, &mut RandGen) -> IndexVec,
 	RandGen: rand::Rng + rand::SeedableRng<Seed = [u8; 32]>,
     F: FieldAdd,
-    [(); F::FIELD_BYTES]: Sized,
+   [(); F::FIELD_BYTES]: Sized,
+    <F::Element as TryFrom<F::Wide>>::Error : core::fmt::Debug,
+
 {
 	let mut rng = <RandGen as rand::SeedableRng>::from_seed(SMALL_RNG_SEED);
 

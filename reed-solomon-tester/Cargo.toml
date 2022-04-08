@@ -13,3 +13,5 @@ fs-err = "2"
 rand = { version = "0.8", features = ["alloc", "small_rng"] }
 itertools = "0.10"
 assert_matches = "1"
+reed-solomon-field = { path = "../field" }
+reed-solomon-novelpoly = { path = "../reed-solomon-novelpoly" }

@@ -2,26 +2,32 @@
 #[non_exhaustive]
 #[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
 pub enum Error {
-	#[error("Number of wanted shards {0} exceeds max of 2^16")]
-	WantedShardCountTooHigh(usize),
+    #[error("Number of wanted shards {0} exceeds max of 2^16")]
+    WantedShardCountTooHigh(usize),
 
-	#[error("Number of wanted shards must be at least 2, but is {0}")]
-	WantedShardCountTooLow(usize),
+    #[error("Number of wanted shards must be at least 2, but is {0}")]
+    WantedShardCountTooLow(usize),
 
-	#[error("Number of wanted payload shards must be at least 1, but is {0}")]
-	WantedPayloadShardCountTooLow(usize),
+    #[error("Number of wanted payload shards must be at least 1, but is {0}")]
+    WantedPayloadShardCountTooLow(usize),
 
-	#[error("Size of the payload is zero")]
-	PayloadSizeIsZero,
+    #[error("Size of the payload is zero")]
+    PayloadSizeIsZero,
 
-	#[error("Needs at least {min} shards of {all} to recover, have {have}")]
-	NeedMoreShards { have: usize, min: usize, all: usize },
+    #[error("Needs at least {min} shards of {all} to recover, have {have}")]
+    NeedMoreShards { have: usize, min: usize, all: usize },
 
-	#[error("Parameters: n (= {n}) and k (= {k}) both must be a power of 2")]
-	ParamterMustBePowerOf2 { n: usize, k: usize },
+    #[error("Parameters: n (= {n}) and k (= {k}) both must be a power of 2")]
+    ParamterMustBePowerOf2 { n: usize, k: usize },
 
-	#[error("Shards do have inconsistent lengths: first = {first}, other = {other})")]
-	InconsistentShardLengths { first: usize, other: usize },
+    #[error("Shards do have inconsistent lengths: first = {first}, other = {other})")]
+    InconsistentShardLengths { first: usize, other: usize },
+
+    #[error("Cannot reconstruct from length zero shards")]
+    ZeroLengthShards,
+
+    #[error("Shard are cannot be properly divided into field elements. Shard length of {shard_length} is not divisable by field element byte length of {field_bytes}")]
+    UndivisableShardLength { shard_length: usize, field_bytes: usize },
 }
 
 /// Result alias to simplify API.

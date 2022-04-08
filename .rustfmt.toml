@@ -1,7 +1,8 @@
 reorder_imports = false
 # nightly only
 # brace_style = "SameLineWhere"
-hard_tabs = true
+hard_tabs = false
+tab_spaces = 4
 max_width = 120
 use_small_heuristics = "Max"
 edition = "2018"

@@ -1,11 +1,9 @@
 use super::*;
 use std::iter;
 
-#[macro_use]
-use crate::{test_all_fields_for};
-
-use crate::field::f2e16::F2e16;
-use crate::field::f256::F256;
+use reed_solomon_field::f2e16::F2e16;
+use reed_solomon_field::f256::F256;
+use reed_solomon_field::test_all_fields_for;
 
 use crate::WrappedShard;
 use assert_matches::assert_matches;
@@ -23,7 +21,7 @@ use crate::availability_util::{reconstruct, encode};
 use std::marker::PhantomData;
 use std::convert::{TryInto, TryFrom};
 
-use crate::field::FieldAdd;
+use reed_solomon_field::FieldAdd;
 
 /// Generate a random index
 fn rand_gf_element<F: FieldAdd>() -> Additive<F> where
@@ -236,17 +234,17 @@ F: FieldAdd,
     assert_recovery(payload, &reconstructed_payload, dropped_indices);
 
     // // verify integrity with criterion tests
-    roundtrip_w_drop_closure::<_, _, _, SmallRng, WrappedShard<_>, _, F>(
-        encode,
-        reconstruct,
+    roundtrip_w_drop_closure::<_, _, _, SmallRng, WrappedShard<F>, _, F>(
+        encode::<F,WrappedShard<F>>,
+        reconstruct::<F,WrappedShard<F>>,
         payload,
         N_WANTED_SHARDS,
         deterministic_drop_shards,
     )?;
 
-    roundtrip_w_drop_closure::<_, _, _, SmallRng, WrappedShard<_>, _, F>(
-        encode,
-        reconstruct,
+    roundtrip_w_drop_closure::<_, _, _, SmallRng, WrappedShard<F>, _, F>(
+        encode::<F,WrappedShard<F>>,
+        reconstruct::<F,WrappedShard<F>>,
         payload,
         N_WANTED_SHARDS,
         drop_random_max,
@@ -267,9 +265,9 @@ macro_rules! simplicissimus {
     ($name:ident: validators: $validator_count:literal, payload: $payload_size:literal; $matchmaker:pat => $assertive:expr) => {
         #[test]
         fn $name () {
-            let res = roundtrip_w_drop_closure::<'_,_,_,_,SmallRng, WrappedShard<_>, _, F2e16>(
-                encode,
-                reconstruct,
+            let res = roundtrip_w_drop_closure::<'_,_,_,_,SmallRng, WrappedShard<F2e16>, _, F2e16>(
+                encode::<F2e16,WrappedShard<F2e16>>,
+                reconstruct::<F2e16,WrappedShard<F2e16>>,
                 &BYTES[0..$payload_size], $validator_count,
                     deterministic_drop_shards::<WrappedShard<_>, SmallRng>);
             assert_matches::assert_matches!(res, $matchmaker => {
@@ -454,27 +452,3 @@ where
 }
 test_all_fields_for!(shard_len_is_reasonable);
 
-pub fn roundtrip<'s, Enc, Recon, E, S, F>(
- 	encode: Enc,
- 	reconstruct: Recon,
- 	payload: &'s [u8],
- 	target_shard_count: usize,
- ) -> Result<()>
- where
- 	Enc: Fn(&'s [u8], usize) -> Result<Vec<S>>,
- 	Recon: Fn(Vec<Option<S>>, usize) -> Result<Vec<u8>>,
-     F: FieldAdd,
-     [(); F::FIELD_BYTES]: Sized,
-    S: Clone + AsRef<[u8]> + AsMut<[[u8; F::FIELD_BYTES]]> + AsRef<[[u8; F::FIELD_BYTES]]> + iter::FromIterator<[u8; F::FIELD_BYTES]> + From<Vec<u8>>,
- {
- 	// let v = roundtrip_w_drop_closure::<'s, Enc, Recon, _, SmallRng, S, E, F>(
- 	// 	encode,
- 	// 	reconstruct,
- 	// 	payload,
- 	// 	target_shard_count,
- 	// 	drop_random_max,
- 	// )?;
- 	// Ok(v)
-    //Ok(vec!([]))
-    Ok(())
- }

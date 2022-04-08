@@ -525,6 +525,6 @@ where
 mod tests;
 
 #[cfg(test)]
-pub use tests::roundtrip;
+pub use reed_solomon_tester::roundtrip;
 
 

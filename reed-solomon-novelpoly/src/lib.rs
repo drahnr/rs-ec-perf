@@ -37,6 +37,7 @@ mod test {
     use super::*;
     use std::convert::TryInto;
     use reed_solomon_tester::{BYTES, N_SHARDS};
+    use reed_solomon_field::test_all_fields_for;
     use self::novel_poly_basis::roundtrip;
 
     // #[cfg(feature = "naive")]

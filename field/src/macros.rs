@@ -116,7 +116,6 @@ macro_rules! decl_field_additive {
         
  } // macro_rules! decl_field_additive
 
-#[cfg(test)]
 #[macro_export]
 macro_rules! test_all_fields_for {
     

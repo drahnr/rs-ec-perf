@@ -6,7 +6,8 @@ use std::error;
 use std::iter;
 use std::result;
 
-use reed_solomon_novelpoly::{Shard, FieldAdd};
+use reed_solomon_novelpoly::{Shard};
+use reed_solomon_field::{FieldAdd};
 use std::convert::{TryFrom};
 
 pub static SMALL_RNG_SEED: [u8; 32] = [
